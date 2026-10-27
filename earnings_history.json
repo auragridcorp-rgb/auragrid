@@ -1,0 +1,2060 @@
+[
+  {
+    "status": "success",
+    "total_sats": 99941763,
+    "confirmed_sats": 99941763,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-03T13:19:20.519733"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=regtest', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-04T00:00:57.117969"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-04T16:03:38.018520"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-04T19:00:46.017629"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-04T20:00:57.020345"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-04T21:00:50.315451"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-04T22:00:34.418571"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-04T23:00:41.918294"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-05T00:00:54.217836"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-05T01:00:34.015195"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-05T02:00:42.613536"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-05T03:00:23.213405"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-05T04:00:45.916012"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-05T05:00:46.615736"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-05T06:00:48.317135"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-05T07:00:49.016088"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-05T08:00:40.716770"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-05T09:00:30.819803"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-05T10:01:02.716632"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-05T11:00:55.821062"
+  },
+  {
+    "status": "success",
+    "total_sats": 0,
+    "confirmed_sats": 0,
+    "unconfirmed_sats": 0,
+    "timestamp": "2026-10-05T12:00:44.518133"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-05T13:00:48.020567"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-05T14:00:39.714922"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-05T15:00:35.514280"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-05T16:00:39.717151"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-05T17:00:46.414177"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-05T18:00:42.620529"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-05T19:00:36.715692"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-05T20:00:40.716014"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-05T21:00:36.220711"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-05T22:00:28.714797"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-05T23:00:30.318146"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T00:00:51.312779"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T01:00:35.520784"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T02:00:26.918190"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T03:00:26.917936"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T04:00:17.417535"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T05:00:57.414263"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T06:00:45.416934"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T07:00:46.016771"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T08:00:28.018789"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T09:00:19.221267"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T10:00:39.116668"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T11:00:38.217105"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T12:00:32.113832"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T13:00:35.215654"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T14:00:32.115306"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T15:00:02.319887"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T16:00:31.116947"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T17:00:34.914964"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T18:00:39.917757"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T19:00:41.816287"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T20:00:54.417612"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T21:00:32.915967"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T22:00:34.718123"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-06T23:00:34.017511"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T00:00:40.817939"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T01:00:34.115633"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T02:00:11.318863"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T03:00:13.817068"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T04:00:22.917215"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T05:00:14.516161"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T06:00:15.214962"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T07:00:09.719283"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T09:00:07.423739"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T10:00:13.017074"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T11:00:22.217076"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T12:00:22.016212"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T13:00:15.116520"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T14:00:09.313786"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T15:00:07.516732"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T16:00:12.518831"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T17:00:11.116296"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T18:00:15.615010"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T19:00:07.022225"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T20:00:08.422197"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T21:00:05.522191"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T22:00:09.415765"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-07T23:00:07.013233"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T00:00:19.718353"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T01:00:07.913981"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T02:00:11.815369"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T03:00:10.020431"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T04:00:15.321617"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T05:00:10.215371"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T06:00:13.615483"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T07:00:07.922844"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T08:00:28.318166"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T09:00:22.017270"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T10:00:10.917176"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T11:00:18.618275"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T12:00:12.313865"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T13:00:07.214792"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T14:01:15.814688"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T15:00:53.716763"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T16:00:32.918273"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T17:00:49.514148"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T18:01:32.318202"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T19:00:41.116799"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T20:00:48.014379"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T21:00:59.216495"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T22:01:02.215065"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-08T23:00:41.616562"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T00:01:01.114830"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T01:00:32.614655"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T02:00:43.914326"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T03:00:57.214475"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T04:00:58.515094"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T05:00:56.018198"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T06:00:32.126343"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T07:01:31.016695"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T08:01:21.514120"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T09:00:29.015829"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T10:00:39.418122"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T11:00:27.916716"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T12:01:15.816270"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T13:01:12.214130"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T14:00:51.913349"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T15:00:44.321297"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T16:00:51.214906"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T17:00:51.016367"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T18:00:57.923874"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T19:00:56.018230"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T20:00:30.217469"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T21:00:41.414003"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T22:01:01.718662"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-09T23:00:52.814210"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T00:01:08.119348"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T01:01:19.227963"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T02:00:38.520802"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T03:00:51.513851"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T04:00:45.717012"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T05:00:37.516550"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T06:00:29.518863"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T07:00:55.019866"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T08:00:56.219390"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T09:00:39.614474"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T10:00:45.113601"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T11:00:51.117648"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T12:00:50.515096"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T13:01:04.316435"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T14:29:11.812972"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T15:00:58.016826"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T16:00:29.823217"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T17:00:47.816567"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T18:00:47.514326"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T19:00:57.373910"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T20:00:42.019017"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T21:00:32.315353"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T22:00:23.716547"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-10T23:00:24.819886"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T00:00:45.415989"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T01:00:37.714473"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T02:00:32.119314"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T03:00:32.715569"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T04:00:34.414575"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T05:00:34.420964"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T06:00:37.412354"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T07:00:27.217336"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T08:00:45.615267"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T09:00:31.827618"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T10:00:38.014605"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T11:00:42.722271"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T12:00:35.923754"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T13:00:38.714897"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T14:00:43.614345"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T15:00:34.515775"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T16:00:31.615193"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T17:00:43.119438"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T18:00:43.017004"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T19:00:50.117967"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T20:00:16.515344"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T21:00:27.420379"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T22:00:36.216922"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-11T23:00:38.219349"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T00:00:37.416938"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T01:01:06.515060"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T02:00:24.716176"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T03:00:37.115182"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T04:00:19.116440"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T05:00:44.416154"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T06:00:40.517464"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T07:00:26.714234"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T08:00:43.518560"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T09:00:30.816511"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T10:00:41.818449"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T11:00:23.318179"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T12:00:34.714534"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T13:00:26.017358"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T14:00:31.617481"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T15:00:22.719021"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T16:00:50.621779"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T17:00:28.917430"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T18:00:49.820135"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T19:00:27.715106"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T20:00:48.818579"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T21:00:37.323077"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T22:00:48.415535"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-12T23:00:54.015565"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T00:00:44.716660"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T01:00:44.915890"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T02:00:38.613793"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T03:00:32.614982"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T04:00:50.216794"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T05:01:07.114244"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T06:00:35.214927"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T07:00:42.519314"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T08:00:28.042103"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T09:00:40.419153"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T10:00:46.515262"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T11:00:32.315319"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T12:00:25.715864"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T13:00:24.013741"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T14:00:32.217466"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T15:00:35.616665"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T16:00:24.918163"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T17:00:15.814291"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T18:01:04.162538"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T19:01:09.818872"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T20:00:56.030388"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T21:00:51.421029"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T22:00:22.760503"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-13T23:00:49.157012"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T00:00:56.944556"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T01:01:06.156099"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T02:00:39.857167"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T03:01:14.151037"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T04:00:50.000891"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T05:00:54.881233"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T06:00:44.945366"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T07:00:55.763385"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T08:00:59.010820"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T09:00:55.129782"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T10:01:26.026849"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T11:00:38.721775"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T12:01:22.961498"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T13:01:00.752237"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T14:01:03.003828"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T15:00:57.613850"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T16:00:21.315923"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T17:00:32.915939"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T18:00:36.916838"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T19:00:22.922071"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T20:00:37.517488"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T21:00:26.814646"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T22:00:38.017423"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-14T23:00:29.620040"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T00:00:33.214995"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T01:00:38.614272"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T02:00:39.714922"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T03:00:20.114546"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T04:00:34.218435"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T05:00:31.720042"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T06:00:34.817794"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T07:00:19.120749"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T08:00:24.216972"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T09:00:39.417011"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T10:00:27.920587"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T11:00:40.521238"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T12:00:53.621933"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T13:01:00.920034"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T14:00:31.633077"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T15:00:31.220005"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T16:00:38.715305"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T17:00:28.417848"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T18:00:39.117774"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T19:00:25.116385"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T20:00:25.816336"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T21:00:24.719310"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T22:00:31.420373"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-15T23:00:24.521807"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T00:00:47.017407"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T01:00:24.415635"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T02:00:39.415871"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T03:00:24.214324"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T04:00:38.218887"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T05:00:32.115421"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T06:00:30.217446"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T07:00:28.219769"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T08:00:39.516649"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T09:00:33.715441"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T10:00:36.813681"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T11:00:29.220691"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T12:00:38.215038"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T13:00:33.815965"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T14:00:23.920575"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T15:00:30.014818"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T16:00:37.421096"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T17:00:27.616784"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T18:00:37.314809"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T19:00:34.017488"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T20:00:47.420577"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T21:00:51.916602"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T22:00:26.720183"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-16T23:00:39.914989"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T00:00:31.115477"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T01:00:23.321417"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T02:00:34.513022"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T03:00:44.017381"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T04:00:30.514806"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T05:00:24.315582"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T06:00:24.514624"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T07:00:23.717045"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T08:00:40.413470"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T09:00:32.913328"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T10:00:45.017581"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T11:00:23.817130"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T12:00:41.615327"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T13:00:16.513653"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T14:00:50.117958"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T15:00:30.114144"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T16:00:19.918627"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T17:00:29.519965"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T18:00:31.018582"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T19:00:21.615339"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T20:00:25.418418"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T21:00:31.218753"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T22:00:28.420726"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-17T23:00:33.916327"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T00:00:29.618162"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T01:00:39.113733"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T02:00:44.117483"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T03:00:49.814289"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T04:00:28.014033"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T05:00:33.014764"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T06:00:45.815716"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T07:00:42.919848"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T08:00:18.921020"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T09:00:38.713195"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T10:00:38.215255"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T11:00:41.916735"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T12:01:05.014811"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T13:01:17.817006"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T14:00:38.318231"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T15:00:33.416968"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T16:00:52.214065"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T17:00:40.418839"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T18:00:26.516786"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T19:00:47.616051"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T20:00:31.314957"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T21:00:25.416555"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T22:00:29.918025"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-18T23:00:18.720417"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T00:00:51.315786"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T01:00:32.218113"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T02:00:22.020406"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T03:00:34.415210"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T04:00:26.818644"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T05:00:21.516772"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T06:00:45.313814"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T07:00:31.617798"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T08:00:24.215979"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T09:00:25.922711"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T10:01:33.120828"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T11:00:27.417714"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T12:00:34.622710"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T13:00:39.513435"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T14:01:40.415108"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T15:01:23.618998"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T16:01:38.914444"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T17:01:28.916217"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T18:00:34.815388"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T19:00:54.617097"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T20:01:04.728091"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T21:01:11.814991"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T22:00:22.817038"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-19T23:00:45.515668"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T00:01:34.814564"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T01:00:39.018981"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T02:01:19.815749"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T03:01:25.614009"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T04:01:23.415534"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T05:00:41.618147"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T06:00:18.713775"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T07:01:33.616277"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T08:00:33.415234"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T09:01:14.314893"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T10:00:48.420104"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T11:00:24.815584"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T12:01:44.913694"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T13:00:24.316125"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T14:00:45.216328"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T15:01:33.213477"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T16:01:27.416805"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T17:01:14.915831"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T18:00:38.419771"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T19:00:29.217062"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T20:01:58.818965"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T21:01:09.617991"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T22:00:30.016991"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-20T23:00:30.114890"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-21T00:01:22.216486"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-21T01:01:34.415839"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-21T02:00:46.314348"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-21T03:00:29.318568"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-21T04:01:54.012789"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-21T05:01:30.018535"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-21T06:01:34.419516"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-21T07:00:39.415039"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-21T08:00:27.617133"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-21T09:00:29.618525"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-21T10:01:17.215205"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-21T11:00:21.020794"
+  },
+  {
+    "status": "error",
+    "message": "Command '['sudo', 'docker', 'exec', 'auragrid-lnd', 'lncli', '--network=mainnet', 'walletbalance']' returned non-zero exit status 1.",
+    "timestamp": "2026-10-21T12:00:22.615621"
+  }
+]

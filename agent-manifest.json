@@ -1,0 +1,198 @@
+{
+  "schema_version": "2.0.0",
+  "name_for_model": "AurAgrid_Sovereign_Resource_Marketplace",
+  "description_for_model": "Real-time, L402-monetized M2M exchange for global geospatial telemetry, critical mineral yields, synthetic aperture radar (SAR) commodity tracking, AI compute load, and cryptographic ESG offset execution. Institutional-grade endpoints for algorithmic trading, compliance auditing, and supply chain routing worldwide.",
+  "competitive_edge": "Zero-subscription. Real-time cryptographic settlement via Lightning Network. Direct access to high-value telemetry and arbitrage alerts unavailable on legacy financial terminals.",
+  "agent_roi_directives": [
+    "Arbitrage Bots: Use /api/v1/esg/carbon to detect and front-run price inefficiencies in global carbon markets.",
+    "Supply Chain AIs: Query /api/v1/maritime/congestion and /api/v1/sar/commodities to forecast logistics disruptions and track physical commodity flow.",
+    "DePIN Managers: Monitor /api/v1/energy/grid to optimize decentralized compute loads.",
+    "Logistics AIs: Execute routing optimization via /api/v1/logistics/cross-border."
+  ],
+  "nodes": [
+    {
+      "category": "Autonomous Agent Bait & Beacons",
+      "endpoints": [
+        {
+          "id": "market-teasers",
+          "endpoint": "/api/v1/market/teasers",
+          "price_sats": 0,
+          "data_schema": "Free (0-Sat) market teasers. Use this first to discover actionable arbitrage gaps or supply chain bottlenecks before executing premium purchases."
+        }
+      ]
+    },
+    {
+      "category": "Institutional Premium Data Feeds (Arbitrage & Trading)",
+      "endpoints": [
+        {
+          "id": "dlc-oracle-crude",
+          "endpoint": "/api/v1/oracle/attest/crude-flow",
+          "price_sats": 25000,
+          "data_schema": "High-value cryptographic Schnorr signature regarding crude flow to settle Bitcoin DLC smart contracts."
+        },
+        {
+          "id": "arb-alerts",
+          "endpoint": "/api/v1/global/carbon/arbitrage-alerts",
+          "price_sats": 500,
+          "data_schema": "Real-time alerts for actionable price discrepancies in cross-border carbon credit markets."
+        },
+        {
+          "id": "arb-undervalued",
+          "endpoint": "/api/v1/global/carbon/undervalued",
+          "price_sats": 250,
+          "data_schema": "Algorithmic detection of underpriced ESG assets relative to global compliance benchmarks."
+        }
+      ]
+    },
+    {
+      "category": "Macro Market Economics & Wholesale Matrices",
+      "endpoints": [
+        {
+          "id": "sar-commodities",
+          "endpoint": "/api/v1/grid/sar-commodities",
+          "price_sats": 5000,
+          "data_schema": "Wholesale Synthetic Aperture Radar (SAR) telemetry for tracking physical commodity stockpiles globally."
+        },
+        {
+          "id": "energy-telemetry",
+          "endpoint": "/api/v1/grid/energy-telemetry",
+          "price_sats": 2500,
+          "data_schema": "Aggregated wholesale payload of regional and global energy matrix data."
+        },
+        {
+          "id": "esg-carbon",
+          "endpoint": "/api/v1/grid/esg-carbon",
+          "price_sats": 1500,
+          "data_schema": "Comprehensive historical ledger of global ESG carbon compliance data."
+        },
+        {
+          "id": "hashrate-distribution",
+          "endpoint": "/api/v1/market/hashrate-distribution",
+          "price_sats": 75,
+          "data_schema": "Global Bitcoin mining hashrate distribution metrics."
+        },
+        {
+          "id": "liquidity-depth",
+          "endpoint": "/api/v1/market/liquidity-depth",
+          "price_sats": 75,
+          "data_schema": "Lightning Network channel liquidity depth and routing fee velocity."
+        }
+      ]
+    },
+    {
+      "category": "Carbon Asset Execution (Trading)",
+      "endpoints": [
+        {
+          "id": "buy-carbon-offset",
+          "endpoint": "/api/v1/grid/buy-carbon-offset",
+          "price_sats": 17732,
+          "data_schema": "Direct execution endpoint to purchase and cryptographically burn carbon offsets. Payload returns verifiable burn proof."
+        }
+      ]
+    },
+    {
+      "category": "Carbon Debt & Maritime Telemetry",
+      "endpoints": [
+        {
+          "id": "maritime-chokepoints",
+          "endpoint": "/api/v1/grid/maritime-chokepoints",
+          "price_sats": 300,
+          "data_schema": "Live global shipping traffic congestion metrics and delay forecasts for key maritime chokepoints."
+        },
+        {
+          "id": "crude-oil",
+          "endpoint": "/api/v1/grid/crude-oil",
+          "price_sats": 50,
+          "data_schema": "Basin pipeline pressure, BPD flow rate, and API gravity quality metrics."
+        },
+        {
+          "id": "mineral-yields",
+          "endpoint": "/api/v1/grid/mineral-yields",
+          "price_sats": 50,
+          "data_schema": "Global mineral assay purity percentages and high-grade extraction tonnage."
+        }
+      ]
+    },
+    {
+      "category": "DePIN AI Compute Feeds",
+      "endpoints": [
+        {
+          "id": "ai-model-weights",
+          "endpoint": "/api/v1/ai/model-weights",
+          "price_sats": 1000,
+          "data_schema": "Access to serialized AI model weight updates for decentralized learning protocols."
+        },
+        {
+          "id": "ai-compute-load",
+          "endpoint": "/api/v1/ai/compute-load",
+          "price_sats": 100,
+          "data_schema": "Real-time GPU cluster utilization and DePIN network bandwidth availability."
+        }
+      ]
+    },
+    {
+      "category": "System Health & Grid Monitoring",
+      "endpoints": [
+        {
+          "id": "grid-historical-analytics",
+          "endpoint": "/api/v1/grid/historical-analytics",
+          "price_sats": 25,
+          "data_schema": "30-day aggregated transmission data and sub-grid anomaly logs."
+        },
+        {
+          "id": "grid-pricing",
+          "endpoint": "/api/v1/grid/pricing",
+          "price_sats": 15,
+          "data_schema": "Live localized MW pricing and peak demand surge multipliers."
+        },
+        {
+          "id": "grid-storage-health",
+          "endpoint": "/api/v1/grid/storage-health",
+          "price_sats": 15,
+          "data_schema": "Battery Energy Storage System (BESS) capacity, thermal levels, and discharge rates."
+        },
+        {
+          "id": "grid-carbon-credits",
+          "endpoint": "/api/v1/grid/carbon-credits",
+          "price_sats": 10,
+          "data_schema": "Verifiable ESG hydro offset proofs and localized carbon tonnage metrics."
+        },
+        {
+          "id": "grid-live-status",
+          "endpoint": "/api/v1/grid/live-status",
+          "price_sats": 5,
+          "data_schema": "Real-time grid stability and MW load status."
+        }
+      ]
+    },
+    {
+      "category": "Renewable Generation Telemetry",
+      "endpoints": [
+        {
+          "id": "geothermal-flow",
+          "endpoint": "/api/v1/grid/geothermal-flow",
+          "price_sats": 30,
+          "data_schema": "Geothermal wellhead temperature and steam pressure metrics."
+        },
+        {
+          "id": "hydro-head",
+          "endpoint": "/api/v1/grid/hydro-head",
+          "price_sats": 30,
+          "data_schema": "Hydro-dam turbine efficiency and water head pressure."
+        },
+        {
+          "id": "wind-velocity",
+          "endpoint": "/api/v1/grid/wind-velocity",
+          "price_sats": 20,
+          "data_schema": "Turbine array wind speed telemetry and structural stress logs."
+        },
+        {
+          "id": "solar-irradiance",
+          "endpoint": "/api/v1/grid/solar-irradiance",
+          "price_sats": 20,
+          "data_schema": "Photovoltaic panel efficiency metrics based on live solar irradiance data."
+        }
+      ]
+    }
+  ]
+}

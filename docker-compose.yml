@@ -1,0 +1,88 @@
+version: "3.8"
+
+services:
+  auragrid-bitcoind:
+    image: ruimarinho/bitcoin-core:24.0.1
+    container_name: auragrid-bitcoind
+    restart: always
+    volumes:
+      - ./data/bitcoind:/home/bitcoin/.bitcoin
+    ports:
+      - "8332:8332"
+    command:
+      - -deprecatedrpc=warnings
+      - -prune=5000
+      - -server=1
+      - -rpcallowip=0.0.0.0/0
+      - -rpcbind=0.0.0.0
+      - -rpcport=8332
+      - -rpcuser=auragridrpc
+      - -rpcpassword=***REMOVED***
+      - -zmqpubrawblock=tcp://0.0.0.0:28332
+      - -zmqpubrawtx=tcp://0.0.0.0:28333
+
+  auragrid-lnd:
+    image: lightninglabs/lnd:v0.18.0-beta
+    container_name: auragrid-lnd
+    restart: always
+    volumes:
+      - ./data/lnd-1:/root/.lnd
+    ports:
+      - "9735:9735"
+      - "10009:10009"
+    depends_on:
+      - auragrid-bitcoind
+    command:
+      - --bitcoin.mainnet
+      - --bitcoin.node=bitcoind
+      - --bitcoind.rpchost=auragrid-bitcoind:8332
+      - --bitcoind.rpcuser=auragridrpc
+      - --bitcoind.rpcpass=***REMOVED***
+      - --bitcoind.zmqpubrawblock=tcp://auragrid-bitcoind:28332
+      - --bitcoind.zmqpubrawtx=tcp://auragrid-bitcoind:28333
+      - --rpclisten=0.0.0.0:10009
+      - --restlisten=0.0.0.0:8080
+      - --listen=0.0.0.0:9735
+      - --tlsextraip=127.0.0.1
+
+  auragrid-lnd-2:
+    image: lightninglabs/lnd:v0.18.0-beta
+    container_name: auragrid-lnd-2
+    restart: always
+    volumes:
+      - ./data/lnd-2:/root/.lnd
+    ports:
+      - "9736:9735"
+      - "10010:10009"
+    depends_on:
+      - auragrid-bitcoind
+    command:
+      - --bitcoin.mainnet
+      - --bitcoin.node=bitcoind
+      - --bitcoind.rpchost=auragrid-bitcoind:8332
+      - --bitcoind.rpcuser=auragridrpc
+      - --bitcoind.rpcpass=***REMOVED***
+      - --bitcoind.zmqpubrawblock=tcp://auragrid-bitcoind:28332
+      - --bitcoind.zmqpubrawtx=tcp://auragrid-bitcoind:28333
+      - --rpclisten=0.0.0.0:10009
+      - --restlisten=0.0.0.0:8081
+      - --listen=0.0.0.0:9736
+      - --tlsextraip=127.0.0.1
+      - --wallet-unlock-password-file=/root/.lnd/walletpassword.txt
+
+  auragrid_api:
+    build: .
+    container_name: auragrid_api
+    restart: always
+    ports:
+      - "8001:8000"
+    depends_on:
+      - auragrid-lnd
+
+  swarm-agents:
+    build: .
+    container_name: auragrid_swarm
+    restart: always
+    depends_on:
+      - auragrid_api
+    command: python auragrid_swarm.py
