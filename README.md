@@ -3,7 +3,7 @@
 # ⚡ AurAgrid Autonomous Telemetry Oracle
 ### Sovereign Machine-to-Machine (M2M) Data Marketplace & L402 Settlement Layer
 
-[![Mainnet Status](https://img.shields.io/badge/Mainnet-Operational-success?style=for-the-badge&logo=lightning)](http://84.12.79.124:8000/)
+[![Mainnet Status](https://img.shields.io/badge/Mainnet-Operational-success?style=for-the-badge&logo=lightning)](https://lightning.network/)
 [![Protocol](https://img.shields.io/badge/Protocol-L402%20%2F%20Lightning-orange?style=for-the-badge&logo=bitcoin)](https://lightning.network/)
 [![Nostr DVM](https://img.shields.io/badge/Nostr-NIP--89%2F90-purple?style=for-the-badge&logo=nostr)](https://nostr.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -13,7 +13,7 @@
 ---
 
 ## 🌐 Overview
-**AurAgrid** ([Command Center](http://84.12.79.124:8000/)) is a sovereign telemetry oracle built for autonomous AI agent swarms, algorithmic trading bots, and enterprise pipelines. By combining **Lightning Network L402 micro-payments**, **Nostr Data Vending Machines (DVMs)**, and drop-in **LangChain tool wrappers**, AurAgrid standardizes real-time data discovery and instant programmatic monetization without API keys or human intervention.
+**AurAgrid** is a sovereign telemetry oracle built for autonomous AI agent swarms, algorithmic trading bots, and enterprise pipelines. By combining **Lightning Network L402 micro-payments**, **Nostr Data Vending Machines (DVMs)**, and drop-in **LangChain tool wrappers**, AurAgrid standardizes real-time data discovery and instant programmatic monetization without API keys or human intervention.
 
 ---
 
