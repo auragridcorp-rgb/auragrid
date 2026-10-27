@@ -1,0 +1,8 @@
+
+# Binaries and large runners
+aperture-runner
+aperture.exe
+*.exe
+*.zip
+*.log
+data/
