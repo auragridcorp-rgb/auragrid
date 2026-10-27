@@ -1,0 +1,35 @@
+name: AurAgrid Demand Scanner
+on:
+  issues:
+    types: [opened, labeled]
+jobs:
+  scan-demand:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Parse Issue for Telemetry Demand
+        env:
+          ISSUE_TITLE: "${{ github.event.issue.title }}"
+          ISSUE_BODY: "${{ github.event.issue.body }}"
+          DISCORD_WEBHOOK: "${{ secrets.DISCORD_ADMIN_WEBHOOK }}"
+        run: |
+          python3 -c ' 
+          import os, json, urllib.request
+          title = os.environ.get("ISSUE_TITLE", "")
+          body = os.environ.get("ISSUE_BODY", "")
+          webhook = os.environ.get("DISCORD_WEBHOOK", "")
+          if "endpoint" in title.lower() or "feed" in title.lower() or "data" in title.lower():
+              payload = {
+                  "embeds": [{
+                      "title": "🚨 New Market Demand / Issue Scout", 
+                      "description": f"**Title:** {title}\\n\\n**Body:** {body[:300]}...", 
+                      "color": 3447003
+                  }]
+              }
+              req = urllib.request.Request(webhook, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
+              try:
+                  urllib.request.urlopen(req)
+              except Exception as e:
+                  print(f"Webhook failed: {e}")
+          ' 
