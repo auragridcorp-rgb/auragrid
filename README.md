@@ -1,54 +1,32 @@
-# ⚡ LangChain AurAgrid Integration
+<div align="center">
 
+# ⚡ AurAgrid Autonomous Telemetry Oracle
+### Sovereign Machine-to-Machine (M2M) Data Marketplace & L402 Settlement Layer
+
+[![Mainnet Status](https://img.shields.io/badge/Mainnet-Operational-success?style=for-the-badge&logo=lightning)](http://84.12.79.124:8000/)
+[![Protocol](https://img.shields.io/badge/Protocol-L402%20%2F%20Lightning-orange?style=for-the-badge&logo=bitcoin)](https://lightning.network/)
+[![Nostr DVM](https://img.shields.io/badge/Nostr-NIP--89%2F90-purple?style=for-the-badge&logo=nostr)](https://nostr.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**langchain-auragrid** is a drop-in LangChain tool wrapper for [AurAgrid](http://84.12.79.124:8000), a Lightning-native, Machine-to-Machine (M2M) data marketplace designed exclusively for autonomous AI agents.
+</div>
 
-## 🚀 Installation
+---
 
+## 🌐 Overview
+**AurAgrid** ([Command Center](http://84.12.79.124:8000/)) is a sovereign telemetry oracle built for autonomous AI agent swarms, algorithmic trading bots, and enterprise pipelines. By combining **Lightning Network L402 micro-payments**, **Nostr Data Vending Machines (DVMs)**, and drop-in **LangChain tool wrappers**, AurAgrid standardizes real-time data discovery and instant programmatic monetization without API keys or human intervention.
+
+---
+
+## 🚀 Core Architecture & Features
+* **L402 Lightning Native:** Automatically handles HTTP 402 payment challenges via LND mainnet invoices, settling micro-transactions instantly.
+* **Cryptographic Attestation:** Validates `X-AurAgrid-Signature` headers signed directly by the oracle node.
+* **Autonomous Discovery:** Broadcasts capabilities globally across Nostr relays via NIP-89/90 and machine-readable `llms.txt` registries.
+* **Affiliate Attribution:** Passes `orchestrator_pubkey` headers to route automated revenue splits upon invoice settlement.
+
+---
+
+## 🛠️ Quick Installation & Usage
+
+### Python / LangChain Integration
 ```bash
 pip install langchain-auragrid
-```
-
-## 💡 Usage Example
-
-```python
-from langchain_auragrid import AurAgridOracleTool
-
-oracle_tool = AurAgridOracleTool()
-result = oracle_tool.invoke({"endpoint_path": "batch/ercot-lmp"})
-print(result)
-```
-
-## 🔒 Features
-* **L402 Lightning Native:** Handles HTTP 402 payment challenges via LND mainnet invoices.
-* **Cryptographic Attestation:** Validates `X-AurAgrid-Signature` headers signed by the oracle node.
-* **Affiliate Attribution:** Passes `orchestrator_pubkey` to receive 5% revenue splits upon invoice settlement.
-
-## 🌐 Available Endpoints (22 Total)
-
-### Retail Telemetry
-* `/api/v1/esg/carbon` - Satellite-verified ESG carbon offset telemetry.
-* `/api/v1/energy/grid` - Real-time energy grid frequency and renewable mix.
-* `/api/v1/sar/commodities` - Synthetic aperture radar (SAR) commodity volume estimates.
-* `/api/v1/maritime/congestion` - Global shipping chokepoint vessel queues and delays.
-* `/api/v1/weather/micro-climate` - High-frequency pressure and wind vector telemetry.
-* `/api/v1/logistics/cross-border` - Manufacturing yard density and freight velocity.
-
-### Wholesale Batch Feeds (Institutional Tier)
-* `/api/v1/batch/hyperscaler-power` - Power load predictions for AI data centers.
-* `/api/v1/batch/lng-supply-chain` - Global LNG carrier fleet tracking and ETAs.
-* `/api/v1/batch/crop-moisture` - Soil moisture and precipitation matrices across agricultural belts.
-* `/api/v1/batch/sts-anomalies` - Open-ocean Ship-to-Ship (STS) cargo transfer tracking.
-* `/api/v1/batch/maritime-weather` - Wind, wave, and swell routing optimizations for shipping fleets.
-* `/api/v1/batch/curtailment-risk` - Renewable energy curtailment predictions for wind/solar.
-* `/api/v1/batch/dark-fleet-matrix` - Dark fleet AIS anomaly and vessel spoofing matrix.
-* `/api/v1/batch/ercot-lmp` - ERCOT 4000-Node locational marginal pricing grid.
-* `/api/v1/batch/port-congestion-index` - Global maritime port congestion index.
-* `/api/v1/batch/carbon-credit-audit` - Satellite carbon credit verification matrix.
-* `/api/v1/batch/spr-stockpile` - Strategic Petroleum Reserve stockpile estimates.
-* `/api/v1/batch/critical-minerals` - Critical minerals & rare-earth supply chain tracker.
-* `/api/v1/batch/naval-escalation` - Geopolitical naval escalation risk matrix.
-* `/api/v1/batch/wildfire-carbon-offset` - Wildfire risk matrix for carbon offset forests.
-* `/api/v1/batch/green-compute` - Zero-carbon data center compute routing matrix.
-* `/api/v1/batch/agri-yield` - Global agricultural crop yield predictor.
