@@ -1,0 +1,5 @@
+2026-10-26 09:30:55,669 - INFO - Local Balance: 49,056 sats | Operational Buffer: 1,000,000 sats
+2026-10-26 09:30:55,670 - INFO - No sweep needed. Excess (-950,944 sats) is below minimum threshold (250,000 sats).
+2026-10-26 12:00:01,332 - ERROR - Unexpected error in sweeper routine: [Errno 2] No such file or directory: 'lncli'
+2026-10-26 18:00:01,452 - ERROR - Unexpected error in sweeper routine: [Errno 2] No such file or directory: 'lncli'
+2026-10-27 00:00:01,576 - ERROR - Unexpected error in sweeper routine: [Errno 2] No such file or directory: 'lncli'
