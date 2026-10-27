@@ -1,17 +1,21 @@
-# AURAGRID SAVE STATE - INITIALIZE CONTEXT
+# AURAGRID SAVE STATE - INSTITUTIONAL M2M ORACLE
 
-"Hey! We are working on the AurAgrid project—a Lightning-monetized M2M API using Bitcoin Core, LND, FastAPI, Aperture (L402 proxy), and FastMCP. Please read ~/AurAgrid/PROJECT_STATE.md to catch up on our architecture, network rules, and past milestones before we write any code."
+"We are scaling AurAgrid as a professional, institutional-grade M2M telemetry oracle. Our focus is absolute technical dominance: L402 Lightning settlement, NIP-89/90 Nostr discovery, FastMCP agent integration, and zero-friction developer documentation."
 
 ## Current System State
 1. **Hardware & OS**: High-performance OCI ARM instance `auragrid-mainnet` (4 Ampere OCPUs, 24GB RAM, Ubuntu) at Public IP `84.12.79.124`.
-2. **Environment & Core Backend**: Active Conda environment `auragrid_env` with core stack (`asyncpg`, `httpx`, `fastapi`, `uvicorn`, `fastmcp`, `websockets`, `nostr`, `secp256k1`). Production telemetry routes live on port `8000` supporting an 18-node simulation catalog.
-3. **L402 Payment Proxy (Aperture)**: Verified on port `8080`. Intercepts production routes returning HTTP 402 with mainnet Lightning invoices. **Verified locally:** Paywall successfully intercepts requests and generates live BOLT11 invoices.
-4. **Bitcoin Core & LND Node**: Mainnet daemon synced. **Liquidity secured:** 5.3M sat inbound channel active via Amboss Magma. **Automated Treasury:** Background `cron` job (`sweep_to_vault.py`) runs every 6 hours, maintaining a 1M sat routing buffer and sweeping profits directly to a self-custodial Kraken Taproot wallet.
-5. **M2M & AI Discovery Suite**:
-   - `AurAgrid/auragrid_sdk/mcp_server.py`: Fully implements `FastMCP` exposing 12 active retail and wholesale tool definitions for native AI agent calls.
-   - `AurAgrid/auragrid_sdk/client.py`: Handles local client calls with strict L402 error checks.
-   - `AurAgrid/dvm/nip90_worker.py`: **Live in Production**. Dual-Threat Nostr Worker running 24/7 in a detached `tmux` session (`auragrid_worker`), actively hunting NIP-90 jobs and routing them to the paywall.
-6. **Network & Public IP Config**: `EXTERNAL_PAYWALL` explicitly bound to `http://84.12.79.124:8080/api/v1`. Network port `9735` is fully open and globally routing.
+2. **Environment & Core Backend**: Active Conda environment `auragrid_env` with core stack (`asyncpg`, `httpx`, `fastapi`, `uvicorn`, `fastmcp`, `websockets`, `nostr`, `secp256k1`). Production telemetry routes live on port `8000` supporting a 22-endpoint institutional catalog.
+3. **L402 Payment Proxy & Settlement**: Mainnet LND node active with ~6.3M sats inbound liquidity capacity and ~29k sats in settled revenue. Aperture/FastAPI payment gating fully operational, issuing live BOLT11 invoices and cryptographic macaroons.
+4. **Autonomous Discovery & Swarm Integration**:
+   - **NIP-89 DVM Broadcast Matrix**: Successfully propagated Kind 31990 capability advertisements across global relays (`relay.damus.io`, `nos.lol`) for core telemetry streams (ESG Carbon, ERCOT LMP, Maritime Congestion).
+   - **Machine Discovery Layer**: `llms.txt` and unified `agent-manifest.json` fully standardized for automated agent framework indexing (LangChain, CrewAI, AutoGPT).
+   - **Background Workers**: Dual-threat Nostr and volatility workers running 24/7 in detached `tmux` sessions (`auragrid_worker`), alongside automated treasury sweeps (`dynamic_liquidity_sweep.py`) securing profits to a Kraken Taproot vault (`bc1p...`).
+
+## Recent Milestones
+* Resolved websocket handshake and f-string syntax bottlenecks in `nip89_broadcaster.py`, achieving successful relay propagation.
+* Overhauled repository documentation (`README.md` and `agent-manifest.json`) to project institutional-grade authority without exposing raw management control interfaces.
+* Seeded infrastructure integration proposals targeting core multi-agent framework repositories.
 
 ## Immediate Next Steps
-1. **Awaiting Directive**: Core infrastructure, inbound liquidity, and automated treasury are 100% operational. Ready to pivot to AI agent workflows or API expansion based on the next command.
+1. Monitor incoming L402 payment challenges and swarm probe traffic via the backend logs.
+2. Fine-tune inbound/outbound channel liquidity balancing as agent-swarm utilization scales up.
