@@ -23,3 +23,5 @@
 
 ## Immediate Next Steps
 1. Monitor incoming L402 payment challenges and swarm probe traffic via the backend logs and command center dashboard.
+
+2. Aggressively get AurAgrid to make it's first M2M sales with the target of $1000 in the first month.
