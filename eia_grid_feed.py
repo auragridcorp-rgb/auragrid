@@ -126,6 +126,13 @@ def fetch(session, api_key: str, now=None) -> dict:
     return build_snapshot(region_rows, fuel_rows)
 
 
+feeds.describe(
+    "energy/grid", source="U.S. Energy Information Administration (EIA), Hourly Electric Grid Monitor (EIA-930)",
+    url="https://api.eia.gov/v2/electricity/rto/", terms_url="https://www.eia.gov/about/copyrights_reuse.php",
+    attribution="Source: U.S. Energy Information Administration. Public domain; EIA does not endorse AurAgrid.",
+    as_of=lambda snap: (snap.get("lower48") or {}).get("period_utc") or max(r["period_utc"] for r in snap["regions"]))
+
+
 def register_from_env() -> bool:
     key = os.environ.get("EIA_API_KEY")
     if not key:

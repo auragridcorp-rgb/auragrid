@@ -182,3 +182,37 @@ class BackgroundFeed:
             raise RuntimeError("%s data older than %ds" % (self.name, self.max_stale))
         return {**value, "fetched_at": datetime.fromtimestamp(at, timezone.utc).isoformat(timespec="seconds"),
                 "stale": age > 2 * self.interval}
+
+
+# ---------------------------------------------------------------------------
+# Provenance: every JSON response names its source (set by each provider module)
+# ---------------------------------------------------------------------------
+_SOURCES: dict = {}
+
+
+def describe(key: str, *, source: str, url: str, terms_url: str, attribution: str,
+             as_of: Callable[[dict], str]):
+    """Register where a feed's data comes from and how to read its own timestamp."""
+    _SOURCES[key] = {"source": source, "url": url, "terms_url": terms_url,
+                     "attribution": attribution, "as_of": as_of}
+
+
+def provenance(key: str, snapshot: dict, retrieved_at: str) -> Optional[dict]:
+    meta = _SOURCES.get(key)
+    if meta is None:
+        return None
+    try:
+        as_of = meta["as_of"](snapshot)
+    except Exception:
+        as_of = None
+    out = {k: meta[k] for k in ("source", "url", "terms_url", "attribution")}
+    out.update(retrieved_at=retrieved_at, as_of=as_of)
+    return out
+
+
+def as_of_for(key: str, snapshot: dict) -> Optional[str]:
+    meta = _SOURCES.get(key)
+    try:
+        return meta["as_of"](snapshot) if meta else None
+    except Exception:
+        return None
