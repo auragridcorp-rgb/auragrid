@@ -1,0 +1,13 @@
+[Unit]
+Description=AurAgrid USD-pegged pricer (Aperture dynamic pricing gRPC)
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/AurAgrid
+ExecStart=/home/ubuntu/AurAgrid/scripts/run_pricer.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
