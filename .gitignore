@@ -6,3 +6,23 @@ aperture.exe
 *.zip
 *.log
 data/
+
+# Secrets and keys (never commit)
+*.macaroon
+dvm_key.txt
+**/dvm_key.txt
+gateway.secret
+fix_lnd.py
+
+# Runtime state
+ledger.db
+ledger.db-shm
+ledger.db-wal
+samples/
+.e2e/
+backups/
+__pycache__/
+
+# Feed credentials
+feeds.env
+portwatch_ranking.json
