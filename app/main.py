@@ -1,148 +1,704 @@
+"""AurAgrid backend: paid feeds, passes/bundles, free samples, operator dashboard.
+
+Run behind Aperture only, bound to loopback:
+
+    uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+Routes
+------
+/api/v1/<feed>                 paid hourly feeds (Aperture sells the token)
+/api/v1/<plan prefix>/<feed>   30-day passes and bundles, rewritten onto the
+                               feed routes by pass_support.PlanRewriteMiddleware
+/api/v1/sample/<feed>          free, delayed, truncated samples (samples.py)
+/api/v1/price/<path>           free price quotes
+/buy                           browser checkout (WebLN, or paste the preimage)
+/agent-manifest.json, /.well-known/ai-plugin.json, /llms.txt, /openapi.json
+/, /api/proxy/*                operator only (HTTP Basic, never routed by Aperture)
+
+Environment variables
+---------------------
+AURAGRID_ADMIN_USER / AURAGRID_ADMIN_PASSWORD
+    Required. Protects the dashboard and /api/proxy/* (HTTP Basic). If unset,
+    those routes return 503 instead of being open.
+AURAGRID_PUBLIC_URL
+    Public https base URL used in the agent manifest (e.g. https://oracle.example.com).
+    Falls back to the request's base URL if unset.
+AURAGRID_SIGNING_PUBKEY
+    Oracle node pubkey agents use to verify X-AurAgrid-Signature. Omitted from
+    the manifest if unset.
+
+AURAGRID_APERTURE_CONFIG
+    Path to aperture.yaml (default: aperture.yaml). Prices and token lifetimes
+    in the manifest are read from it, and startup warns about catalog paths no
+    Aperture rule covers, and Aperture rules that cover no catalog path.
+AURAGRID_BATCH_PREFIX
+    URL prefix of the 16 batch feeds under /api/v1/ ("batch" or "wholesale").
+AURAGRID_PRICING_CONFIG
+    pricing.yaml: USD targets and the `plans:` (passes, bundles).
+AURAGRID_GATEWAY_SECRET
+    Shared secret Aperture injects as X-AurAgrid-Gateway on paid services
+    (gen_aperture.py --gateway-secret-file). Paid routes refuse requests
+    without it. If unset, they only require an L402 header, which a client
+    that reaches this port directly can forge.
+
+AURAGRID_LEDGER_DB
+    SQLite file for the request-time usage ledger (default: ledger.db).
+AURAGRID_ATTEST_MACAROON, LND_REST_URL, LND_TLS_CERT
+    Enable v2 response attestation on /api/v1/*: path to a macaroon baked with
+    only `message:write` (lncli bakemacaroon message:write --save_to=attest.macaroon),
+    LND's REST URL, and its TLS certificate.
+
+Revenue attribution
+-------------------
+1. Exact: l402_ledger records sha256(preimage) -> endpoint, plan (hourly,
+   pass_30d, bundle) and call count as paid requests are served; settled
+   invoices are joined on payment hash.
+2. Fallback for invoices with no ledger row (older, or the header wasn't
+   forwarded): service name in the memo, then invoice price.
+Check /api/proxy/stats -> "ledger" to confirm the ledger is capturing calls.
+Requires PyYAML for reading aperture.yaml.
+"""
+import logging
 import os
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+import re
+import secrets
+import threading
+import time
+from contextlib import asynccontextmanager
+
+from datetime import datetime, timezone
+
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+
+import feeds
+from app.buy_page import BUY_HTML
 from app.lnd_client import lnd
+from attestation import AttestationMiddleware, lnd_rest_signer
+from l402_ledger import L402LedgerMiddleware, Ledger, hash_hex, token_payment_hash
+from pass_support import HOURLY, PlanRewriteMiddleware, PlanRouter, load_plans
+from pricer import PriceEngine, normalize_path
+from samples import SAMPLE_FEEDS, SampleStore, resolve as resolve_sample
+from sample_examples import example_body
+import eia_lng_feed
+import ercot_feed
+import portwatch_feed
 
-app = FastAPI(title="AurAgrid Command Center")
+ercot_feed.register_from_env()       # ercot-lmp, when ERCOT credentials are configured
+portwatch_feed.register_from_env()   # port-congestion-index, when AURAGRID_PORTWATCH_ENABLED=1
+eia_lng_feed.register_from_env()     # lng-supply-chain, when EIA_API_KEY is configured
 
-@app.get("/api/proxy/stats")
+log = logging.getLogger("auragrid")
+
+ADMIN_USER = os.environ.get("AURAGRID_ADMIN_USER")
+ADMIN_PASSWORD = os.environ.get("AURAGRID_ADMIN_PASSWORD")
+PUBLIC_URL = os.environ.get("AURAGRID_PUBLIC_URL", "").rstrip("/")
+SIGNING_PUBKEY = os.environ.get("AURAGRID_SIGNING_PUBKEY")
+GATEWAY_SECRET = os.environ.get("AURAGRID_GATEWAY_SECRET", "")
+GATEWAY_HEADER = "x-auragrid-gateway"
+
+if PUBLIC_URL and not PUBLIC_URL.startswith("https://"):
+    log.warning("AURAGRID_PUBLIC_URL is not https: L402 macaroons/preimages "
+                "are bearer credentials and must not travel over plain HTTP.")
+
+@asynccontextmanager
+async def lifespan(_app):
+    engine.start()   # background BTC/USD refresh; `engine` is defined below
+    sample_store.start()
+    yield
+    sample_store.stop()
+    engine.stop()
+
+
+app = FastAPI(title="AurAgrid Command Center", lifespan=lifespan)
+security = HTTPBasic()
+
+
+# ---------------------------------------------------------------------------
+# Catalog: single source of truth for endpoints, names, and (optional) prices
+# ---------------------------------------------------------------------------
+CATALOG = [
+    # slug (path after /api/v1/), display name, tier, description
+    ("esg/carbon", "ESG Carbon", "retail",
+     "Satellite-verified ESG carbon offset telemetry."),
+    ("energy/grid", "Energy Grid", "retail",
+     "Real-time energy grid frequency and renewable mix."),
+    ("sar/commodities", "SAR Commodities", "retail",
+     "Synthetic aperture radar (SAR) commodity volume estimates."),
+    ("maritime/congestion", "Maritime Congestion", "retail",
+     "Global shipping chokepoint vessel queues and delays."),
+    ("weather/micro-climate", "Weather Micro Climate", "retail",
+     "High-frequency pressure and wind vector telemetry."),
+    ("logistics/cross-border", "Logistics Cross Border", "retail",
+     "Manufacturing yard density and freight velocity."),
+    ("batch/hyperscaler-power", "Batch Hyperscaler Power Forecast", "wholesale",
+     "Power load predictions for AI data centers."),
+    ("batch/lng-supply-chain", "U.S. LNG Export Monitor", "wholesale",
+     "Monthly U.S. LNG exports by terminal and destination country, export prices, and month/year "
+     "changes (U.S. EIA; about three months' publication lag)."),
+    ("batch/crop-moisture", "Batch Crop Moisture Matrix", "wholesale",
+     "Soil moisture and precipitation matrices across agricultural belts."),
+    ("batch/sts-anomalies", "Batch STS Transfer Anomalies", "wholesale",
+     "Open-ocean ship-to-ship (STS) cargo transfer tracking."),
+    ("batch/maritime-weather", "Batch Maritime Weather Routing", "wholesale",
+     "Wind, wave, and swell routing optimizations for shipping fleets."),
+    ("batch/curtailment-risk", "Batch Renewable Curtailment Risk", "wholesale",
+     "Renewable energy curtailment predictions for wind/solar."),
+    ("batch/dark-fleet-matrix", "Global Dark Fleet Gap Matrix", "wholesale",
+     "Dark fleet AIS anomaly and vessel spoofing matrix."),
+    ("batch/ercot-lmp", "ERCOT 4,000-Node LMP Aggregation", "wholesale",
+     "ERCOT 4000-node locational marginal pricing grid."),
+    ("batch/port-congestion-index", "Top 100 Global Port Activity Index", "wholesale",
+     "Port calls and import/export tonnage for the 100 busiest ports vs. their 90-day baseline, "
+     "plus chokepoint transits (IMF PortWatch, satellite AIS; updated weekly)."),
+    ("batch/carbon-credit-audit", "Multi-Project Carbon Credit Audit Matrix", "wholesale",
+     "Satellite carbon credit verification matrix."),
+    ("batch/spr-stockpile", "Batch SPR Stockpile Estimates", "wholesale",
+     "Strategic Petroleum Reserve stockpile estimates."),
+    ("batch/critical-minerals", "Batch Critical Minerals Tracker", "wholesale",
+     "Critical minerals and rare-earth supply chain tracker."),
+    ("batch/naval-escalation", "Batch Naval Escalation Risk", "wholesale",
+     "Geopolitical naval escalation risk matrix."),
+    ("batch/wildfire-carbon-offset", "Batch Wildfire Carbon Offset Risk", "wholesale",
+     "Wildfire risk matrix for carbon offset forests."),
+    ("batch/green-compute", "Batch Green Compute Routing", "wholesale",
+     "Zero-carbon data center compute routing matrix."),
+    ("batch/agri-yield", "Batch Agri-Commodities Yield Predictor", "wholesale",
+     "Global agricultural crop yield predictor."),
+]
+
+BATCH_PREFIX = os.environ.get("AURAGRID_BATCH_PREFIX", "batch")
+if BATCH_PREFIX != "batch":
+    CATALOG = [(slug.replace("batch/", BATCH_PREFIX + "/", 1), name, tier, desc)
+               for slug, name, tier, desc in CATALOG]
+
+APERTURE_CONFIG = os.environ.get("AURAGRID_APERTURE_CONFIG", "aperture.yaml")
+PRICING_CONFIG = os.environ.get("AURAGRID_PRICING_CONFIG", "pricing.yaml")
+PLANS = load_plans(PRICING_CONFIG)
+PLAN_ROUTER = PlanRouter(PLANS, feed_route_prefix=BATCH_PREFIX)
+_catalog_slugs = {slug for slug, _, _, _ in CATALOG}
+for _plan in PLANS:
+    for _feed in _plan.feeds:
+        if "%s/%s" % (BATCH_PREFIX, _feed) not in _catalog_slugs:
+            log.error("Plan %s lists feed %r, which is not a %s/ catalog feed", _plan.name, _feed, BATCH_PREFIX)
+
+
+def load_aperture_services(path: str) -> list:
+    try:
+        import yaml  # PyYAML
+        with open(path) as fh:
+            return (yaml.safe_load(fh) or {}).get("services") or []
+    except Exception as exc:
+        log.warning("Could not read %s (%s): prices will be missing from the manifest", path, exc)
+        return []
+
+
+def build_pricing(services: list):
+    """Match each catalog endpoint to the first Aperture rule covering its path.
+
+    Returns (pricing by slug, catalog paths no rule covers, rules covering no catalog path).
+    """
+    rules = []
+    for svc in services:
+        try:
+            if svc.get("pathregexp"):
+                rules.append((svc, re.compile(svc["pathregexp"])))
+        except re.error:
+            log.warning("Invalid pathregexp in Aperture service %r", svc.get("name"))
+
+    pricing, unmatched = {}, []
+    for slug, _, _, _ in CATALOG:
+        path = "/api/v1/" + slug
+        hit = next((svc for svc, rx in rules if rx.match(path)), None)
+        if hit is None:
+            unmatched.append(path)
+            continue
+        info = {"aperture_service": hit.get("name")}
+        if hit.get("price") is not None:
+            info["price_sats"] = int(hit["price"])
+        if hit.get("timeout"):
+            info["token_ttl_seconds"] = int(hit["timeout"])
+        pricing[slug] = info
+
+    for plan in PLANS:
+        for path in plan.paths():
+            hit = next((svc for svc, rx in rules if rx.match(path)), None)
+            if hit is None or hit.get("name") != plan.name:
+                unmatched.append("%s (plan %s)" % (path, plan.name))
+
+    paths = ["/api/v1/" + slug for slug, _, _, _ in CATALOG]
+    paths += [p for plan in PLANS for p in plan.paths()]
+    paths += ["/api/v1/sample/" + key for key in SAMPLE_FEEDS] + ["/buy"]
+    dead = [svc.get("name") for svc, rx in rules if not any(rx.match(p) for p in paths)]
+    return pricing, unmatched, dead
+
+
+engine = PriceEngine(APERTURE_CONFIG, PRICING_CONFIG)
+ledger = Ledger(os.environ.get("AURAGRID_LEDGER_DB", "ledger.db"))
+sample_store = SampleStore()
+
+# Middleware order matters (last added = outermost):
+#   attestation -> ledger -> plan rewrite -> routes
+# so the ledger and the signature both see the path the client paid for.
+app.add_middleware(PlanRewriteMiddleware, router=PLAN_ROUTER)
+app.add_middleware(L402LedgerMiddleware, ledger=ledger, normalize=normalize_path,
+                   classify=PLAN_ROUTER.kind_for_path)
+if not GATEWAY_SECRET:
+    log.warning("AURAGRID_GATEWAY_SECRET not set: paid routes only check for an L402 header. "
+                "Keep this port on loopback, or anyone reaching it skips the paywall.")
+
+# v2 response attestation (added last = outermost, so it signs the final bytes of /api/v1/* 200s).
+_attest_macaroon = os.environ.get("AURAGRID_ATTEST_MACAROON")  # path to a message:write-only macaroon
+if _attest_macaroon:
+    with open(_attest_macaroon, "rb") as _fh:
+        _attest_macaroon_hex = _fh.read().hex()
+    app.add_middleware(
+        AttestationMiddleware,
+        sign=lnd_rest_signer(os.environ["LND_REST_URL"], os.environ["LND_TLS_CERT"], _attest_macaroon_hex),
+    )
+else:
+    log.warning("AURAGRID_ATTEST_MACAROON not set: responses will NOT carry X-AurAgrid-Signature-V2")
+PRICING, _unmatched, _dead_rules = build_pricing(load_aperture_services(APERTURE_CONFIG))
+if _unmatched:
+    log.warning("Catalog paths NOT covered by any Aperture rule (served unpaid or not at all): %s",
+                ", ".join(_unmatched))
+if _dead_rules:
+    log.warning("Aperture rules that match no catalog path: %s", ", ".join(map(str, _dead_rules)))
+
+PLAN_PRICES = {}   # plan name -> static sats from aperture.yaml
+for _svc in load_aperture_services(APERTURE_CONFIG):
+    if any(_svc.get("name") == _plan.name for _plan in PLANS) and _svc.get("price"):
+        PLAN_PRICES[_svc["name"]] = int(_svc["price"])
+
+# price (sats) -> names charging that price, for revenue attribution
+PRICE_INDEX: dict = {}
+for _slug, _name, _, _ in CATALOG:
+    _price = PRICING.get(_slug, {}).get("price_sats")
+    if _price:
+        PRICE_INDEX.setdefault(_price, []).append(_name)
+for _plan in PLANS:
+    if not _plan.dynamic and PLAN_PRICES.get(_plan.name):   # pegged prices move; only static ones identify
+        PRICE_INDEX.setdefault(PLAN_PRICES[_plan.name], []).append(_plan.display_name())
+
+# Shown in the revenue breakdown only (not advertised as a data endpoint).
+EXTRA_SERVICES = ["Mainnet Lightning Routing Liquidity"]
+UNATTRIBUTED = "Unattributed"
+
+BY_SLUG = {slug: name for slug, name, _, _ in CATALOG}
+PLAN_KIND_BY_NAME = {plan.display_name(): plan.kind for plan in PLANS}
+CATALOG_NAMES = {name for _, name, _, _ in CATALOG}
+ALL_NAMES = [name for _, name, _, _ in CATALOG] + list(PLAN_KIND_BY_NAME) + EXTRA_SERVICES
+
+
+def _norm(s: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", (s or "").lower())
+
+
+# Longest names first so a short name can never swallow a longer one.
+LEGACY_MATCH = sorted(((n, _norm(n)) for n in ALL_NAMES), key=lambda p: -len(p[1]))
+
+
+def attribute(memo: str, sats: int = 0) -> str:
+    norm_memo = _norm(memo)
+    for name, norm_name in LEGACY_MATCH:
+        if norm_name in norm_memo:
+            return name
+    names = PRICE_INDEX.get(sats, [])
+    if len(names) == 1:
+        return names[0]
+    if len(names) > 1:
+        return "%d-sat tier (%d services)" % (sats, len(names))
+    return UNATTRIBUTED
+
+
+NAME_BY_ENDPOINT = {normalize_path("/api/v1/" + slug): name for slug, name, _, _ in CATALOG}
+for _plan in PLANS:
+    for _path in _plan.paths():
+        NAME_BY_ENDPOINT[normalize_path(_path)] = _plan.display_name()
+
+
+def plan_kind_for(service: str, ledger_plan=None) -> str:
+    """hourly | pass_30d | bundle | unattributed, for the revenue-by-plan split."""
+    if ledger_plan:
+        return ledger_plan
+    if service in PLAN_KIND_BY_NAME:
+        return PLAN_KIND_BY_NAME[service]
+    return HOURLY if service in CATALOG_NAMES else UNATTRIBUTED.lower()
+
+
+def service_for_endpoint(endpoint: str) -> str:
+    """Map a ledger endpoint (normalized path) to a catalog display name."""
+    best = None
+    for key, name in NAME_BY_ENDPOINT.items():
+        if endpoint == key or endpoint.startswith(key + "/"):
+            if best is None or len(key) > len(best[0]):
+                best = (key, name)
+    return best[1] if best else endpoint
+
+
+def attribute_invoice(inv: dict, sats: int, by_hash: dict):
+    """Return (service name, 'ledger' | 'fallback')."""
+    endpoint = by_hash.get(hash_hex(inv.get("r_hash")))
+    if endpoint:
+        return service_for_endpoint(endpoint), "ledger"
+    return attribute(inv.get("memo", ""), sats), "fallback"
+
+
+# ---------------------------------------------------------------------------
+# Operator auth (fail closed)
+# ---------------------------------------------------------------------------
+def require_admin(creds: HTTPBasicCredentials = Depends(security)) -> None:
+    if not ADMIN_USER or not ADMIN_PASSWORD:
+        raise HTTPException(status_code=503, detail="Operator auth is not configured")
+    user_ok = secrets.compare_digest(creds.username.encode(), ADMIN_USER.encode())
+    pass_ok = secrets.compare_digest(creds.password.encode(), ADMIN_PASSWORD.encode())
+    if not (user_ok and pass_ok):
+        raise HTTPException(status_code=401, detail="Unauthorized",
+                            headers={"WWW-Authenticate": 'Basic realm="AurAgrid"'})
+
+
+def require_gateway(request: Request) -> None:
+    """Paid routes: only serve requests Aperture has already authorized."""
+    if GATEWAY_SECRET:
+        sent = request.headers.get(GATEWAY_HEADER, "")
+        if not secrets.compare_digest(sent.encode(), GATEWAY_SECRET.encode()):
+            raise HTTPException(status_code=403, detail="Paid routes are only served through the L402 gateway")
+    elif not token_payment_hash(request.headers.get("authorization", "")):
+        raise HTTPException(status_code=401, detail="L402 token required")
+
+
+# ---------------------------------------------------------------------------
+# LND snapshot cache: one fetch shared by all dashboard endpoints
+# ---------------------------------------------------------------------------
+CACHE_TTL_SECONDS = 5.0
+_cache = {"t": 0.0, "invoices": [], "node": {}}
+_lock = threading.Lock()
+
+
+def snapshot():
+    with _lock:
+        if time.monotonic() - _cache["t"] > CACHE_TTL_SECONDS:
+            try:
+                _cache["invoices"] = lnd.get_invoices()
+                _cache["node"] = lnd.get_mainnet_node_stats()
+            except Exception as exc:
+                log.exception("LND fetch failed")
+                raise HTTPException(status_code=502, detail="LND unavailable") from exc
+            _cache["t"] = time.monotonic()
+        return _cache["invoices"], _cache["node"]
+
+
+def is_settled(inv: dict) -> bool:
+    return bool(inv.get("settled")) or str(inv.get("state", "")).upper() == "SETTLED"
+
+
+def paid_sats(inv: dict) -> int:
+    paid = int(inv.get("amt_paid_sat") or 0)
+    return paid or int(inv.get("value") or 0)
+
+
+# ---------------------------------------------------------------------------
+# Operator API
+# ---------------------------------------------------------------------------
+@app.get("/api/proxy/stats", dependencies=[Depends(require_admin)], include_in_schema=False)
 def proxy_stats():
-    invoices = lnd.get_invoices()
-    
-    services_rev = {
-        "ESG Carbon": 0, "Energy Grid": 0, "SAR Commodities": 0, "Maritime Congestion": 0, 
-        "Weather Micro Climate": 0, "Logistics Cross Border": 0, "Batch Hyperscaler Power Forecast": 0,
-        "Batch LNG Supply Chain Tracker": 0, "Batch Crop Moisture Matrix": 0, "Batch STS Transfer Anomalies": 0,
-        "Batch Maritime Weather Routing": 0, "Batch Renewable Curtailment Risk": 0, "Global Dark Fleet Gap Matrix": 0,
-        "ERCOT 4,000-Node LMP Aggregation": 0, "Top 100 Global Port Congestion Index": 0, "Multi-Project Carbon Credit Audit Matrix": 0,
-        "Batch SPR Stockpile Estimates": 0, "Batch Critical Minerals Tracker": 0, "Batch Naval Escalation Risk": 0,
-        "Batch Wildfire Carbon Offset Risk": 0, "Batch Green Compute Routing": 0, "Batch Agri-Commodities Yield Predictor": 0,
-        "Mainnet Lightning Routing Liquidity": 0
-    }
+    invoices, node = snapshot()
 
-    # Strict normalization to prevent "Batch" endpoints from overlapping in memo parsing
+    by_hash = ledger.endpoints_by_hash()
+    plan_by_hash = ledger.plans_by_hash()
+    usage = ledger.usage_by_endpoint()
+
+    revenue = {name: 0 for name in ALL_NAMES}
+    revenue[UNATTRIBUTED] = 0
+    by_plan = {kind: {"revenue_sats": 0, "settled_invoices": 0} for kind in (HOURLY, "pass_30d", "bundle")}
+    settled_count = from_ledger = 0
     for inv in invoices:
-        memo = inv.get("memo", "").lower()
-        val = int(inv.get("value", 0))
-        matched = False
-        
-        norm_memo = memo.replace(" ", "").replace("-", "").replace("_", "")
-        for sname in services_rev.keys():
-            norm_sname = sname.lower().replace(" ", "").replace("-", "").replace("_", "")
-            # Exact string containment required rather than broad prefix matching
-            if norm_sname in norm_memo:
-                services_rev[sname] += val
-                matched = True
-                break
-        
-        if not matched:
-            services_rev["Mainnet Lightning Routing Liquidity"] += val
+        if not is_settled(inv):
+            continue  # unpaid / expired invoices are not revenue
+        settled_count += 1
+        sats = paid_sats(inv)
+        service, how = attribute_invoice(inv, sats, by_hash)
+        from_ledger += how == "ledger"
+        revenue[service] = revenue.get(service, 0) + sats
+        kind = plan_kind_for(service, plan_by_hash.get(hash_hex(inv.get("r_hash"))))
+        row = by_plan.setdefault(kind, {"revenue_sats": 0, "settled_invoices": 0})
+        row["revenue_sats"] += sats
+        row["settled_invoices"] += 1
 
-    total_revenue = sum(services_rev.values())
-    settled_count = sum(1 for inv in invoices if inv.get("settled", False))
+    calls = {}
+    for endpoint, u in usage.items():
+        name = service_for_endpoint(endpoint)
+        calls[name] = calls.get(name, 0) + u["calls"]
+        revenue.setdefault(name, 0)
+
     total_count = len(invoices)
-    success_rate = int((settled_count / total_count * 100)) if total_count > 0 else 0
-
-    node_stats = lnd.get_mainnet_node_stats()
-    total_capacity = node_stats.get("total_capacity", 2500000)
+    breakdown = sorted(
+        ({"service_name": n, "total_revenue_sats": r, "calls": calls.get(n, 0)}
+         for n, r in revenue.items()),
+        key=lambda row: (-row["total_revenue_sats"], -row["calls"]),
+    )
 
     return {
-        "total_revenue_sats": total_revenue,
+        "total_revenue_sats": sum(revenue.values()),
+        "settled_count": settled_count,
         "transaction_count": total_count,
-        "success_rate": success_rate,
-        "active_channels": node_stats.get("active_channels", 4),
-        "total_capacity_sats": total_capacity,
-        "forwarding_fee_apr": "2.15%",
-        "htlc_success_rate": "99.6%",
-        "service_breakdown": [
-            {"service_name": name, "total_revenue_sats": rev} for name, rev in services_rev.items()
-        ]
+        "success_rate": round(settled_count / total_count * 100, 1) if total_count else 0.0,
+        # Only real values from the node; None renders as "n/a" in the UI.
+        "active_channels": node.get("active_channels"),
+        "total_capacity_sats": node.get("total_capacity"),
+        "forwarding_fee_apr": node.get("forwarding_fee_apr"),
+        "htlc_success_rate": node.get("htlc_success_rate"),
+        "service_breakdown": breakdown,
+        "revenue_by_plan": by_plan,
+        "usage_by_plan": ledger.usage_by_plan(),
+        # Diagnostics: if tokens stays 0 while served_without_token grows, Aperture
+        # is not forwarding the Authorization header to this backend.
+        "ledger": {
+            "tokens": sum(u["tokens"] for u in usage.values()),
+            "calls": sum(u["calls"] for u in usage.values()),
+            "served_without_token": ledger.served_without_token,
+            "settled_attributed_by_ledger": from_ledger,
+            "settled_attributed_by_fallback": settled_count - from_ledger,
+        },
     }
-@app.get("/api/proxy/info")
+
+
+@app.get("/api/proxy/info", dependencies=[Depends(require_admin)], include_in_schema=False)
 def proxy_info():
-    return lnd.get_mainnet_node_stats()
+    return snapshot()[1]
 
-@app.get("/api/proxy/transactions")
-def proxy_transactions(limit: int = 200):
-    raw_invoices = lnd.get_invoices()
-    formatted_txs = []
-    for inv in raw_invoices:
-        formatted_txs.append({
+
+@app.get("/api/proxy/transactions", dependencies=[Depends(require_admin)], include_in_schema=False)
+def proxy_transactions(limit: int = Query(200, ge=1, le=1000)):
+    invoices, _ = snapshot()
+    by_hash = ledger.endpoints_by_hash()
+    plan_by_hash = ledger.plans_by_hash()
+    newest = sorted(invoices, key=lambda i: int(i.get("creation_date") or 0), reverse=True)[:limit]
+    rows = []
+    for inv in newest:
+        amount = int(inv.get("value") or 0)
+        service = attribute_invoice(inv, amount, by_hash)[0]
+        rows.append({
             "payment_hash": inv.get("r_hash"),
-            "amount_sat": int(inv.get("value", 0)),
-            "memo": inv.get("memo", "L402 Telemetry Payload"),
-            "state": "settled" if inv.get("settled") else "unpaid",
-            "created_at": inv.get("creation_date")
+            "amount_sat": amount,
+            "memo": inv.get("memo") or "L402 Telemetry Payload",
+            "service": service,
+            "plan": plan_kind_for(service, plan_by_hash.get(hash_hex(inv.get("r_hash")))),
+            "state": "settled" if is_settled(inv) else "unpaid",
+            "created_at": inv.get("creation_date"),
         })
-    return {"transactions": formatted_txs}
+    return {"transactions": rows}
 
-@app.get("/api/proxy/services")
+
+@app.get("/api/proxy/services", dependencies=[Depends(require_admin)], include_in_schema=False)
 def proxy_services():
+    return {"services": _catalog_entries()}
+
+
+# ---------------------------------------------------------------------------
+# Agent manifest (public)
+# ---------------------------------------------------------------------------
+def _catalog_entries() -> list[dict]:
+    entries = []
+    for slug, name, tier, desc in CATALOG:
+        entry = {"path": "/api/v1/" + slug, "name": name, "tier": tier,
+                 "description": desc, "auth": "L402"}
+        info = PRICING.get(slug, {})
+        if info.get("price_sats") is not None:
+            entry["price_sats"] = info["price_sats"]
+        if info.get("token_ttl_seconds"):
+            entry["token_ttl_seconds"] = info["token_ttl_seconds"]
+        quote = engine.quote("/api/v1/" + slug)
+        if quote:
+            entry["price_sats"] = quote["price_sats"]
+            entry["pricing"] = quote["pricing"]
+            if "usd_price" in quote:
+                entry["usd_price"] = quote["usd_price"]
+            entry["quote_url"] = "/api/v1/price/" + slug
+        entries.append(entry)
+    return entries
+
+
+def _plan_entries() -> list[dict]:
+    entries = []
+    for plan in PLANS:
+        entry = {"name": plan.name, "title": plan.display_name(), "kind": plan.kind,
+                 "paths": plan.paths(), "token_ttl_seconds": plan.timeout, "auth": "L402",
+                 "pricing": "usd_pegged" if plan.dynamic else "static"}
+        quote = engine.quote(plan.paths()[0])
+        if quote:
+            entry["price_sats"] = quote["price_sats"]
+            entry["quote_url"] = "/api/v1/price/" + plan.paths()[0][len("/api/v1/"):]
+            if "usd_price" in quote:
+                entry["usd_price"] = quote["usd_price"]
+        entries.append(entry)
+    return entries
+
+
+def _sample_entries() -> list[dict]:
+    return [{"feed": key, "path": "/api/v1/sample/" + key, "auth": "none",
+             "delay_seconds": sample_store.delay, "max_items_per_list": sample_store.max_items}
+            for key in SAMPLE_FEEDS]
+
+
+@app.get("/.well-known/ai-plugin.json")
+@app.get("/agent-manifest.json")
+async def get_agent_manifest(request: Request):
+    base = PUBLIC_URL or str(request.base_url).rstrip("/")
+    signature = {"header": "X-AurAgrid-Signature"}
+    if SIGNING_PUBKEY:
+        signature["pubkey"] = SIGNING_PUBKEY
     return {
-        "services": [
-            {
-                "name": "Albertine Rift Energy Grid Telemetry",
-                "address": "localhost:8081",
-                "protocol": "HTTP",
-                "host_regexp": ".*",
-                "path_regexp": "/albertine.*",
-                "price": 5000,
-                "auth": "L402",
-                "auth_scheme": "AUTH_SCHEME_L402"
-            },
-            {
-                "name": "SAR Commodities Tracking Stream",
-                "address": "localhost:8082",
-                "protocol": "HTTP",
-                "host_regexp": ".*",
-                "path_regexp": "/sar.*",
-                "price": 10000,
-                "auth": "L402",
-                "auth_scheme": "AUTH_SCHEME_L402"
-            },
-            {
-                "name": "Maritime Congestion Feeds",
-                "address": "localhost:8083",
-                "protocol": "HTTP",
-                "host_regexp": ".*",
-                "path_regexp": "/maritime.*",
-                "price": 7500,
-                "auth": "L402",
-                "auth_scheme": "AUTH_SCHEME_L402"
-            },
-            {
-                "name": "Mainnet Lightning Routing Liquidity",
-                "address": "localhost:8084",
-                "protocol": "HTTP",
-                "host_regexp": ".*",
-                "path_regexp": "/lightning.*",
-                "price": 15000,
-                "auth": "L402",
-                "auth_scheme": "AUTH_SCHEME_L402"
-            }
-        ]
+        "schema_version": "v1",
+        "name_for_human": "AurAgrid L402 Oracle",
+        "name_for_model": "auragrid_oracle",
+        "description_for_model": (
+            "Oracle providing %d real-time ESG, energy, maritime, and wholesale telemetry "
+            "endpoints. All endpoints require L402 Lightning Network payments. On a 402 "
+            "Payment Required, extract the invoice and macaroon from the WWW-Authenticate "
+            "header, pay the invoice with a Lightning node, and replay the request with "
+            "'Authorization: L402 <macaroon>:<preimage>'. Prices may be USD-pegged and "
+            "change with the BTC price: GET the endpoint's quote_url right before paying and "
+            "accept an invoice within the quote's tolerance_pct. A paid token stays valid for the "
+            "endpoint's token_ttl_seconds, so reuse it instead of paying again. For repeated use, "
+            "a plan (30-day pass or multi-feed bundle) sells one token that opens its paths for "
+            "token_ttl_seconds. Free, delayed and truncated samples are listed under samples. "
+            "Responses carry an X-AurAgrid-Signature header; verify it against the published "
+            "signing pubkey."
+            % len(CATALOG)
+        ),
+        "api": {"type": "openapi", "url": base + "/openapi.json"},
+        "endpoints_count": len(CATALOG),
+        "endpoints": _catalog_entries(),
+        "plans": _plan_entries(),
+        "samples": _sample_entries(),
+        "checkout_url": base + "/buy",
+        "payment_protocol": "L402",
+        "signature": signature,
     }
 
-@app.get("/", response_class=HTMLResponse)
-def serve_dashboard():
-    return """
-<!DOCTYPE html>
+
+@app.get("/api/v1/price/{slug:path}")
+def get_endpoint_quote(slug: str):
+    """Public, free quote for an endpoint (same price the Aperture pricer charges)."""
+    quote = engine.quote("/api/v1/" + slug)
+    if quote is None:
+        raise HTTPException(status_code=404, detail="Endpoint not priced")
+    plan = PLAN_ROUTER.plan_for_path("/api/v1/" + slug)
+    quote["plan"] = plan.kind if plan else HOURLY
+    return quote
+
+
+# ---------------------------------------------------------------------------
+# Free samples (no paywall, no attestation, not in the ledger)
+# ---------------------------------------------------------------------------
+@app.get("/api/v1/sample/{slug}")
+def get_sample(slug: str):
+    """Delayed, truncated sample of a hero feed. 503 while the first snapshot ages."""
+    key = resolve_sample(slug)
+    if key is None:
+        raise HTTPException(status_code=404, detail="No sample for this feed")
+    body = sample_store.get(key)
+    if body is None and not feeds.get(key) and example_body(key):
+        # Not connected yet: show the response structure, clearly labeled as synthetic.
+        return JSONResponse(example_body(key), headers={"Cache-Control": "public, max-age=300"})
+    if body is None:
+        detail = "Sample warming up" if feeds.get(key) else "Feed not connected"
+        return JSONResponse({"detail": detail, "feed": key,
+                             "delay_seconds": sample_store.delay},
+                            status_code=503, headers={"Retry-After": str(sample_store.interval)})
+    full = "/api/v1/%s/%s" % (BATCH_PREFIX, key)
+    body["full_feed"] = {
+        "path": full,
+        "quote_url": "/api/v1/price/%s/%s" % (BATCH_PREFIX, key),
+        "plans": [plan.name for plan in PLANS if key in plan.feeds],
+        "checkout_url": "/buy",
+    }
+    return JSONResponse(body, headers={"Cache-Control": "public, max-age=60"})
+
+
+# ---------------------------------------------------------------------------
+# Paid feeds. Aperture sells and checks the token; passes and bundles arrive
+# here rewritten by PlanRewriteMiddleware. Data comes from feeds.py providers.
+# ---------------------------------------------------------------------------
+def _feed_handler(slug: str):
+    key = normalize_path("/api/v1/" + slug)
+
+    def handler(request: Request):
+        try:
+            data = feeds.fetch(key)
+        except feeds.FeedNotConnected:
+            log.error("Paid request for %s, but no provider is registered in feeds.py", key)
+            raise HTTPException(status_code=503, detail="Feed not connected")
+        except Exception:
+            log.exception("Provider for %s failed", key)
+            raise HTTPException(status_code=502, detail="Feed temporarily unavailable")
+        return {
+            "feed": key,
+            "plan": getattr(request.state, "auragrid_plan_kind", HOURLY),
+            "served_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "data": data,
+        }
+
+    return handler
+
+
+for _slug, _name, _tier, _desc in CATALOG:
+    app.add_api_route("/api/v1/" + _slug, _feed_handler(_slug), methods=["GET"], name=_slug,
+                      summary=_name, description=_desc + " Requires L402.", tags=[_tier],
+                      dependencies=[Depends(require_gateway)])
+
+
+# ---------------------------------------------------------------------------
+# Discovery for LLM agents
+# ---------------------------------------------------------------------------
+@app.get("/llms.txt", response_class=PlainTextResponse, include_in_schema=False)
+def llms_txt(request: Request):
+    base = PUBLIC_URL or str(request.base_url).rstrip("/")
+    lines = ["# AurAgrid L402 Oracle", "",
+             "> Paid ESG, energy, maritime and wholesale telemetry over L402 (Lightning).", "",
+             "- Manifest: %s/agent-manifest.json" % base,
+             "- OpenAPI: %s/openapi.json" % base,
+             "- Checkout (browser, WebLN): %s/buy" % base, "", "## Free samples (delayed, truncated)"]
+    lines += ["- %s/api/v1/sample/%s" % (base, key) for key in SAMPLE_FEEDS]
+    lines += ["", "## Plans"]
+    lines += ["- %s: %s (token valid %d days)" % (p.display_name(), ", ".join(p.paths()), p.timeout // 86400)
+              for p in PLANS]
+    lines += ["", "## Hourly feeds"]
+    lines += ["- %s: /api/v1/%s" % (name, slug) for slug, name, _, _ in CATALOG]
+    return "\n".join(lines) + "\n"
+
+
+@app.get("/buy", response_class=HTMLResponse, include_in_schema=False)
+def buy_page():
+    nonce = secrets.token_urlsafe(16)
+    csp = ("default-src 'none'; script-src 'nonce-%s'; style-src 'nonce-%s'; connect-src 'self'; "
+           "img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" % (nonce, nonce))
+    return HTMLResponse(BUY_HTML.replace("__NONCE__", nonce),
+                        headers={"Content-Security-Policy": csp, "X-Content-Type-Options": "nosniff",
+                                 "Referrer-Policy": "no-referrer", "Cache-Control": "no-store"})
+
+
+# ---------------------------------------------------------------------------
+# Operator dashboard
+# ---------------------------------------------------------------------------
+DASHBOARD_HTML = """<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AurAgrid Command Center - Mainnet</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono&display=swap");
         body { background-color: #0f172a; color: #f8fafc; font-family: "Inter", sans-serif; }
         .font-mono { font-family: "JetBrains Mono", monospace; }
-        .glass-card { 
-            background: rgba(30, 41, 59, 0.7); 
-            backdrop-filter: blur(12px); 
-            border: 1px solid rgba(255, 255, 255, 0.05); 
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
         }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -153,26 +709,42 @@ def serve_dashboard():
     <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50 px-8 py-5 flex justify-between items-center shadow-sm">
         <div class="flex items-center space-x-4">
             <div class="relative flex h-4 w-4">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
+              <span id="pulse" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-500 opacity-75"></span>
+              <span id="dot" class="relative inline-flex rounded-full h-4 w-4 bg-slate-500"></span>
             </div>
             <h1 class="text-2xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">AurAgrid</h1>
             <span class="text-xs px-2.5 py-1 rounded bg-slate-800/80 text-slate-300 border border-slate-700 font-mono tracking-wide">MAINNET LND</span>
         </div>
         <div id="node-info" class="text-sm text-slate-400 font-mono flex items-center space-x-2">
-            <i class="fas fa-network-wired text-slate-500"></i><span>Synchronizing Telemetry...</span>
+            <i class="fas fa-network-wired text-slate-500"></i><span>Synchronizing...</span>
         </div>
     </header>
 
     <main class="flex-1 p-8 max-w-7xl mx-auto w-full space-y-8">
-        <!-- Stats Grid -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <!-- Advanced Routing & Liquidity Telemetry Bar -->
-        <div class="glass-card px-6 py-4 rounded-xl flex flex-wrap justify-between items-center text-xs font-mono text-slate-300 gap-4 mt-6">
+            <div class="glass-card p-6 rounded-2xl">
+                <div class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center"><i class="fas fa-coins mr-2 text-slate-500"></i>Settled Revenue</div>
+                <div class="text-3xl font-black text-white mt-1"><span id="stat-revenue">--</span> <span class="text-sm font-medium text-slate-500">sats</span></div>
+            </div>
+            <div class="glass-card p-6 rounded-2xl">
+                <div class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center"><i class="fas fa-file-invoice mr-2 text-slate-500"></i>Invoices Issued</div>
+                <div id="stat-count" class="text-3xl font-black text-white mt-1">--</div>
+            </div>
+            <div class="glass-card p-6 rounded-2xl">
+                <div class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center"><i class="fas fa-chart-line mr-2 text-slate-500"></i>Settlement Rate</div>
+                <div id="stat-success" class="text-3xl font-black text-emerald-400 mt-1">--</div>
+            </div>
+            <div class="glass-card p-6 rounded-2xl">
+                <div class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center"><i class="fas fa-satellite-dish mr-2 text-slate-500"></i>Node API</div>
+                <div id="stat-node" class="text-3xl font-black text-slate-400 mt-1">--</div>
+            </div>
+        </div>
+
+        <div class="glass-card px-6 py-4 rounded-xl flex flex-wrap justify-between items-center text-xs font-mono text-slate-300 gap-4">
             <div class="flex items-center space-x-2">
                 <i class="fas fa-water text-cyan-400"></i>
                 <span class="text-slate-400">Total Capacity:</span>
-                <span id="tele-capacity" class="text-white font-bold">-- sats</span>
+                <span id="tele-capacity" class="text-white font-bold">--</span>
             </div>
             <div class="flex items-center space-x-2">
                 <i class="fas fa-percent text-emerald-400"></i>
@@ -190,49 +762,33 @@ def serve_dashboard():
                 <span id="tele-channels" class="text-amber-400 font-bold">--</span>
             </div>
         </div>
-            <div class="glass-card p-6 rounded-2xl transition-transform hover:scale-105">
-                <div class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center"><i class="fas fa-coins mr-2 text-slate-500"></i>Total Revenue</div>
-                <div id="stat-revenue" class="text-3xl font-black text-white mt-1">-- <span class="text-sm font-medium text-slate-500">sats</span></div>
-            </div>
-            <div class="glass-card p-6 rounded-2xl transition-transform hover:scale-105">
-                <div class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center"><i class="fas fa-file-invoice mr-2 text-slate-500"></i>Total Invoices</div>
-                <div id="stat-count" class="text-3xl font-black text-white mt-1">--</div>
-            </div>
-            <div class="glass-card p-6 rounded-2xl transition-transform hover:scale-105">
-                <div class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center"><i class="fas fa-chart-line mr-2 text-slate-500"></i>Success Rate</div>
-                <div id="stat-success" class="text-3xl font-black text-emerald-400 mt-1">--%</div>
-            </div>
-            <div class="glass-card p-6 rounded-2xl transition-transform hover:scale-105">
-                <div class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center"><i class="fas fa-satellite-dish mr-2 text-slate-500"></i>Node Status</div>
-                <div class="text-3xl font-black text-cyan-400 mt-1">Online</div>
-            </div>
+
+        <div class="glass-card p-6 rounded-2xl">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center"><i class="fas fa-layer-group mr-2 text-slate-500"></i>Revenue by Plan</h2>
+            <div id="plan-list" class="grid grid-cols-1 md:grid-cols-4 gap-4 font-mono text-sm"></div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Services Breakdown -->
             <div class="glass-card p-7 rounded-2xl flex flex-col h-[420px]">
                 <h2 class="text-xl font-bold text-white mb-6 flex items-center"><i class="fas fa-server mr-3 text-cyan-400"></i> L402 Services Revenue</h2>
                 <div id="services-list" class="space-y-4 flex-1 overflow-y-auto scrollbar-hide pr-2">
-                    <div class="text-slate-500 text-sm animate-pulse font-mono">Loading telemetry breakdown...</div>
+                    <div class="text-slate-500 text-sm animate-pulse font-mono">Loading breakdown...</div>
                 </div>
             </div>
 
-            <!-- Recent Transactions -->
             <div class="glass-card p-7 rounded-2xl flex flex-col h-[420px]">
-                <h2 class="text-xl font-bold text-white mb-6 flex items-center"><i class="fas fa-bolt mr-3 text-amber-400"></i> Live Node Invoices</h2>
+                <h2 class="text-xl font-bold text-white mb-6 flex items-center"><i class="fas fa-bolt mr-3 text-amber-400"></i> Recent Invoices</h2>
                 <div class="overflow-hidden flex-1">
                     <div class="h-full overflow-y-auto scrollbar-hide pr-2">
                         <table class="w-full text-left text-sm">
                             <thead class="text-xs uppercase text-slate-500 sticky top-0 bg-slate-800/90 backdrop-blur z-10">
                                 <tr>
-                                    <th class="pb-3 pt-2 pl-2 font-semibold rounded-tl-lg">Memo</th>
+                                    <th class="pb-3 pt-2 pl-2 font-semibold">Memo</th>
                                     <th class="pb-3 pt-2 font-semibold">Amount</th>
-                                    <th class="pb-3 pt-2 pr-2 font-semibold text-right rounded-tr-lg">Status</th>
+                                    <th class="pb-3 pt-2 pr-2 font-semibold text-right">Status</th>
                                 </tr>
                             </thead>
-                            <tbody id="tx-tbody" class="divide-y divide-slate-700/50">
-                                <tr><td colspan="3" class="py-6 text-slate-500 text-center text-xs font-mono">Loading node database...</td></tr>
-                            </tbody>
+                            <tbody id="tx-tbody" class="divide-y divide-slate-700/50"></tbody>
                         </table>
                     </div>
                 </div>
@@ -240,108 +796,141 @@ def serve_dashboard():
         </div>
     </main>
 
+    <div class="fixed bottom-4 right-4 z-50 px-3.5 py-2 rounded-lg font-mono text-xs bg-slate-900 border border-slate-700 text-slate-300">
+        <span id="sync-label">Waiting for first sync</span>
+    </div>
+
     <script>
-        async function fetchDashboardData() {
+        const $ = (id) => document.getElementById(id);
+        const num = (n) => (n === null || n === undefined) ? "n/a" : Number(n).toLocaleString();
+        const pct = (v) => (v === null || v === undefined) ? "n/a" : String(v);
+
+        function el(tag, cls, text) {
+            const e = document.createElement(tag);
+            if (cls) e.className = cls;
+            if (text !== undefined) e.textContent = text;   // textContent: never parsed as HTML
+            return e;
+        }
+
+        async function getJSON(url) {
+            const r = await fetch(url, { credentials: "same-origin" });
+            if (!r.ok) throw new Error(url + " returned " + r.status);
+            return r.json();
+        }
+
+        function setStatus(ok, label) {
+            const color = ok ? "bg-emerald-500" : "bg-red-500";
+            $("dot").className = "relative inline-flex rounded-full h-4 w-4 " + color;
+            $("pulse").className = "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 " + color;
+            $("sync-label").textContent = label;
+            $("stat-node").textContent = ok ? "Reachable" : "Unreachable";
+            $("stat-node").className = "text-3xl font-black mt-1 " + (ok ? "text-cyan-400" : "text-red-400");
+        }
+
+        function renderServices(rows) {
+            const list = $("services-list");
+            list.replaceChildren();
+            rows.forEach((svc) => {
+                const row = el("div", "flex justify-between items-center p-4 bg-slate-800/40 rounded-xl border border-slate-700/50");
+                row.appendChild(el("span", "text-sm font-semibold text-slate-200", svc.service_name));
+                const right = el("div", "text-right");
+                right.appendChild(el("div", "text-sm font-black text-emerald-400", num(svc.total_revenue_sats) + " sats"));
+                right.appendChild(el("div", "text-[10px] font-mono text-slate-500", num(svc.calls) + " calls"));
+                row.appendChild(right);
+                list.appendChild(row);
+            });
+        }
+
+        const PLAN_LABELS = { hourly: "Hourly", pass_30d: "30-day Pass", bundle: "Bundle", unattributed: "Unattributed" };
+
+        function renderPlans(revenue, usage) {
+            const list = $("plan-list");
+            list.replaceChildren();
+            Object.keys(revenue).forEach((kind) => {
+                const box = el("div", "p-4 bg-slate-800/40 rounded-xl border border-slate-700/50");
+                box.appendChild(el("div", "text-xs text-slate-400 uppercase", PLAN_LABELS[kind] || kind));
+                box.appendChild(el("div", "text-xl font-black text-emerald-400", num(revenue[kind].revenue_sats) + " sats"));
+                const u = usage[kind] || { tokens: 0, calls: 0 };
+                box.appendChild(el("div", "text-[10px] text-slate-500",
+                    num(revenue[kind].settled_invoices) + " invoices, " + num(u.tokens) + " tokens, " + num(u.calls) + " calls"));
+                list.appendChild(box);
+            });
+        }
+
+        function renderTransactions(txs) {
+            const body = $("tx-tbody");
+            body.replaceChildren();
+            if (txs.length === 0) {
+                const tr = el("tr");
+                const td = el("td", "py-6 text-slate-500 text-center font-mono text-xs", "No invoices recorded yet.");
+                td.colSpan = 3;
+                tr.appendChild(td);
+                body.appendChild(tr);
+                return;
+            }
+            txs.forEach((tx) => {
+                const tr = el("tr");
+                const memo = el("td", "py-3.5 pl-2 font-mono text-xs text-slate-300 max-w-[180px] truncate", tx.memo);
+                memo.setAttribute("title", tx.memo);
+                const amt = el("td", "py-3.5 font-bold text-white", num(tx.amount_sat) + " sats");
+                const state = el("td", "py-3.5 pr-2 text-right");
+                const settled = tx.state === "settled";
+                state.appendChild(el(
+                    "span",
+                    "px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide border " +
+                        (settled
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                            : "bg-amber-500/10 text-amber-400 border-amber-500/20"),
+                    settled ? "Settled" : "Unpaid"
+                ));
+                tr.append(memo, amt, state);
+                body.appendChild(tr);
+            });
+        }
+
+        async function refresh() {
+            if (document.hidden) return;
             try {
-                const [statsRes, infoRes, txRes, svcRes] = await Promise.all([
-                    axios.get('/api/proxy/stats'),
-                    axios.get('/api/proxy/info'),
-                    axios.get('/api/proxy/transactions'),
-                    axios.get('/api/proxy/services')
+                const [stats, info, txs] = await Promise.all([
+                    getJSON("/api/proxy/stats"),
+                    getJSON("/api/proxy/info"),
+                    getJSON("/api/proxy/transactions?limit=100"),
                 ]);
 
-                // Stats
-                document.getElementById('stat-revenue').innerHTML = statsRes.data.total_revenue_sats.toLocaleString() + ' <span class="text-sm font-medium text-slate-500">sats</span>';
-                document.getElementById('stat-count').innerText = statsRes.data.transaction_count;
-                document.getElementById('stat-success').innerText = statsRes.data.success_rate + '%';
-                document.getElementById('tele-capacity').innerText = (statsRes.data.total_capacity_sats || 2500000).toLocaleString() + ' sats';
-                document.getElementById('tele-apr').innerText = statsRes.data.forwarding_fee_apr || '2.4%';
-                document.getElementById('tele-htlc').innerText = statsRes.data.htlc_success_rate || '99.2%';
-                document.getElementById('tele-channels').innerText = statsRes.data.active_channels || '4';
-                document.getElementById('node-info').innerHTML = `<span class="text-cyan-400 font-bold">${infoRes.data.node_alias}</span> <span class="text-slate-500">(${infoRes.data.network})</span> <span class="text-slate-600 px-2">•</span> <span>Channels: <span class="text-white">${infoRes.data.active_channels}</span></span>`;
+                $("stat-revenue").textContent = num(stats.total_revenue_sats);
+                $("stat-count").textContent = num(stats.transaction_count);
+                $("stat-success").textContent = stats.success_rate + "%";
+                $("tele-capacity").textContent = stats.total_capacity_sats == null ? "n/a" : num(stats.total_capacity_sats) + " sats";
+                $("tele-apr").textContent = pct(stats.forwarding_fee_apr);
+                $("tele-htlc").textContent = pct(stats.htlc_success_rate);
+                $("tele-channels").textContent = num(stats.active_channels);
 
-                // Services
-                const svcList = document.getElementById('services-list');
-                svcList.innerHTML = '';
-                statsRes.data.service_breakdown.forEach(svc => {
-                    svcList.innerHTML += `
-                        <div class="flex justify-between items-center p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 hover:bg-slate-700/40 transition-colors">
-                            <span class="text-sm font-semibold text-slate-200">${svc.service_name}</span>
-                            <span class="text-sm font-black text-emerald-400">${svc.total_revenue_sats.toLocaleString()} sats</span>
-                        </div>
-                    `;
-                });
+                const nodeInfo = $("node-info");
+                nodeInfo.replaceChildren(
+                    el("span", "text-cyan-400 font-bold", info.node_alias || "unknown node"),
+                    el("span", "text-slate-500", "(" + (info.network || "n/a") + ")"),
+                    el("span", "text-slate-600 px-2", "|"),
+                    el("span", "text-slate-300", "Channels: " + num(info.active_channels))
+                );
 
-                // Transactions
-                const txTbody = document.getElementById('tx-tbody');
-                txTbody.innerHTML = '';
-                if (txRes.data.transactions.length === 0) {
-                    txTbody.innerHTML = '<tr><td colspan="3" class="py-6 text-slate-500 text-center font-mono text-xs">No invoices recorded yet.</td></tr>';
-                } else {
-                    txRes.data.transactions.forEach(tx => {
-                        const badge = tx.state === 'settled' 
-                            ? '<span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Settled</span>'
-                            : '<span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide bg-amber-500/10 text-amber-400 border border-amber-500/20">Unpaid</span>';
-                        txTbody.innerHTML += `
-                            <tr class="hover:bg-slate-800/30 transition-colors">
-                                <td class="py-3.5 pl-2 font-mono text-xs text-slate-300 max-w-[180px] truncate" title="${tx.memo}">${tx.memo}</td>
-                                <td class="py-3.5 font-bold text-white">${tx.amount_sat} <span class="text-slate-500 text-xs font-normal">sats</span></td>
-                                <td class="py-3.5 pr-2 text-right">${badge}</td>
-                            </tr>
-                        `;
-                    });
-                }
+                renderServices(stats.service_breakdown);
+                renderPlans(stats.revenue_by_plan || {}, stats.usage_by_plan || {});
+                renderTransactions(txs.transactions);
+                setStatus(true, "Synced " + new Date().toLocaleTimeString());
             } catch (err) {
-                console.error("Error fetching dashboard telemetry:", err);
+                console.error("Dashboard refresh failed:", err);
+                setStatus(false, "Sync failed, retrying");
             }
         }
 
-        fetchDashboardData();
-        setInterval(fetchDashboardData, 8000);
+        refresh();
+        setInterval(refresh, 8000);
     </script>
-
-    <div style="position: fixed; bottom: 15px; right: 15px; background: #0f172a; color: #38bdf8; padding: 8px 14px; border-radius: 8px; font-family: monospace; font-size: 12px; border: 1px solid #38bdf8; z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
-        🟢 LIVE SYNC: <span id="sync-status">Connected</span>
-    </div>
-    <script>
-        async function pollStats() {
-            try {
-                const res = await fetch("/api/proxy/stats");
-                const data = await res.json();
-                
-                // Update Total Revenue
-                const revElements = document.querySelectorAll("strong");
-                revElements.forEach(el => {
-                    if (el.innerText.includes("sats") && !el.innerText.includes("CAPACITY")) {
-                        // Match and update the total revenue block
-                    }
-                });
-                
-                document.getElementById("sync-status").innerText = "Synced " + new().toLocaleTimeString();
-            } catch(e) {
-                document.getElementById("sync-status").innerText = "Reconnecting...";
-                document.getElementById("sync-status").style.color = "#f87171";
-            }
-        }
-        setInterval(pollStats, 3000);
-    </script>
-    </body>
-    
+</body>
 </html>
 """
 
-@app.get("/.well-known/ai-plugin.json")
-@app.get("/agent-manifest.json")
-async def get_agent_manifest():
-    return {
-        "schema_version": "v1",
-        "name_for_human": "AurAgrid L402 Oracle",
-        "name_for_model": "auragrid_oracle",
-        "description_for_model": "Oracle providing 22 real-time ESG, energy, maritime, and wholesale telemetry endpoints. All endpoints strictly require L402 Lightning Network payments. When encountering a 402 Payment Required, the agent must extract the invoice from the WWW-Authenticate header, pay it via a Lightning node, and replay the request with the L402 macaroon:preimage proof.",
-        "api": {
-            "type": "openapi",
-            "url": "http://84.12.79.124:8000/openapi.json"
-        },
-        "endpoints_count": 22,
-        "payment_protocol": "L402"
-    }
+
+@app.get("/", response_class=HTMLResponse, dependencies=[Depends(require_admin)], include_in_schema=False)
+def serve_dashboard():
+    return DASHBOARD_HTML

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package pricesrpc;
+
+service Prices {
+  rpc GetPrice (GetPriceRequest) returns (GetPriceResponse);
+}
+
+message GetPriceRequest {
+  string path = 1;
+}
+
+message GetPriceResponse {
+  int64 price_sats = 1;
+}
