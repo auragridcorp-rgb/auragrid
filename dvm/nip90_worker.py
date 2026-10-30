@@ -1,175 +1,265 @@
+"""AurAgrid NIP-90 data vending machine (DVM).
+
+Answers Nostr job requests for AurAgrid feeds, and only those:
+  * job requests of kind AURAGRID_DVM_JOB_KIND (default 5990) that name a feed,
+  * or any 5000-5999 job request that tags this DVM's pubkey ("p" tag).
+Every other job on the relays is ignored, and jobs older than startup are
+never answered (subscriptions use "since").
+
+A job names its feed with ["param", "feed", "<feed>"] or ["i", "<feed>", "text"].
+Feed names come from the live manifest: e.g. maritime-weather, energy/grid,
+spr-stockpile, lng-supply-chain, ercot-lmp.
+
+  free + live  -> job result (kind = request kind + 1000): the feed's latest data,
+                  lists cut to 10 items to fit relay size limits, plus the URL of
+                  the full free endpoint
+  paid + live  -> feedback "payment-required" with the L402 URL and the current
+                  quote (the same price Aperture charges)
+  otherwise    -> feedback "error" (unknown feed / coming soon)
+
+The catalog and prices are read from the backend's /agent-manifest.json and
+/api/v1/price quotes, so the DVM never drifts from pricing.yaml.
+
+Environment
+-----------
+AURAGRID_DVM_KEY_FILE      hex private key (default: dvm/dvm_key.txt next to this file)
+AURAGRID_DVM_RELAYS        comma-separated relay URLs
+AURAGRID_DVM_JOB_KIND      default 5990
+AURAGRID_DVM_JOBS_PER_HOUR per requesting pubkey (default 20)
+AURAGRID_BACKEND_URL       backend for manifest/data/quotes (default http://127.0.0.1:8001)
+AURAGRID_PUBLIC_URL        public base URL put in results (default http://84.12.79.124:8000)
+"""
 import asyncio
 import json
+import logging
+import os
+import sys
 import time
+from collections import defaultdict, deque
+
 import httpx
 import websockets
-import random
-import os
 from nostr.event import Event
 from nostr.key import PrivateKey
 
-RELAYS = [
-    "wss://relay.damus.io",
-    "wss://nos.lol"
-]
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from samples import truncate  # noqa: E402
 
-EXTERNAL_PAYWALL = "http://84.12.79.124:8080/api/v1"
-LOCAL_PAYWALL = "http://127.0.0.1:8080/api/v1"
+log = logging.getLogger("auragrid.dvm")
 
-# The complete 22-endpoint institutional mapping
-ROUTE_MAPPING = {
-    "carbon": "/esg/carbon",
-    "grid": "/energy/grid",
-    "commodities": "/sar/commodities",
-    "congestion": "/maritime/congestion",
-    "microclimate": "/weather/micro-climate",
-    "logistics": "/logistics/cross-border",
-    "hyperscaler_power": "/wholesale/hyperscaler-power",
-    "lng_supply": "/wholesale/lng-supply",
-    "crop_moisture": "/wholesale/crop-moisture",
-    "sts_anomalies": "/wholesale/sts-anomalies",
-    "maritime_weather": "/wholesale/weather-routing",
-    "renewable_curtailment": "/wholesale/curtailment-risk",
-    "dark_fleet": "/wholesale/dark-fleet",
-    "ercot_lmp": "/wholesale/ercot-lmp",
-    "port_congestion": "/wholesale/port-congestion-index",
-    "carbon_audit": "/wholesale/carbon-credit-audit",
-    "spr_stockpile": "/wholesale/spr-stockpile",
-    "critical_minerals": "/wholesale/critical-minerals",
-    "naval_escalation": "/wholesale/naval-escalation",
-    "wildfire_carbon": "/wholesale/wildfire-carbon",
-    "green_compute": "/wholesale/green-compute",
-    "agri_yield": "/wholesale/agri-yield"
-}
+HERE = os.path.dirname(os.path.abspath(__file__))
+KEY_FILE = os.environ.get("AURAGRID_DVM_KEY_FILE", os.path.join(HERE, "dvm_key.txt"))
+RELAYS = [r.strip() for r in os.environ.get(
+    "AURAGRID_DVM_RELAYS", "wss://relay.damus.io,wss://nos.lol,wss://relay.primal.net").split(",") if r.strip()]
+JOB_KIND = int(os.environ.get("AURAGRID_DVM_JOB_KIND", "5990"))
+JOBS_PER_HOUR = int(os.environ.get("AURAGRID_DVM_JOBS_PER_HOUR", "20"))
+BACKEND = os.environ.get("AURAGRID_BACKEND_URL", "http://127.0.0.1:8001").rstrip("/")
+PUBLIC = os.environ.get("AURAGRID_PUBLIC_URL", "http://84.12.79.124:8000").rstrip("/")
+MAX_RESULT_BYTES = 60_000      # most relays reject events much larger than ~64 KB
+MANIFEST_TTL = 300
 
-# Persist identity so relays don't view us as a disposable bot
-KEY_FILE = "dvm_key.txt"
-if os.path.exists(KEY_FILE):
-    with open(KEY_FILE, "r") as f:
-        bot_key = PrivateKey(bytes.fromhex(f.read().strip()))
-else:
-    bot_key = PrivateKey()
-    with open(KEY_FILE, "w") as f:
-        f.write(bot_key.hex())
 
-bot_pub = bot_key.public_key.hex()
+# ---------------------------------------------------------------------------
+# Pure logic (tested in tests/test_dvm.py)
+# ---------------------------------------------------------------------------
+def feed_key(path: str) -> str:
+    """'/api/v1/batch/maritime-weather' -> 'maritime-weather'; '/api/v1/energy/grid' -> 'energy/grid'."""
+    p = path[len("/api/v1/"):] if path.startswith("/api/v1/") else path.strip("/")
+    head, _, rest = p.partition("/")
+    return rest if head in ("batch", "wholesale") and rest else p
 
-def event_to_dict(evt):
-    return {
-        "id": evt.id, "pubkey": evt.public_key, "created_at": evt.created_at,
-        "kind": evt.kind, "tags": evt.tags, "content": evt.content, "sig": evt.signature
-    }
 
-async def broadcast_dvm_manifest():
-    """Globally announces all 22 endpoints to Nostr AI swarms (Kind 31990)."""
-    print(f"[MANIFEST] Broadcasting AurAgrid 22-Feed Menu to Nostr relays...")
+def catalog_from_manifest(manifest: dict) -> dict:
+    """feed key (and aliases with underscores) -> manifest endpoint entry."""
+    out = {}
+    for entry in manifest.get("endpoints", []):
+        key = feed_key(entry["path"])
+        out[key] = entry
+        out[key.replace("-", "_")] = entry
+        out[key.split("/")[-1]] = out.get(key.split("/")[-1], entry)
+    return out
+
+
+def requested_feed(event: dict):
+    for tag in event.get("tags", []):
+        if len(tag) >= 3 and tag[0] == "param" and tag[1] == "feed":
+            return tag[2].strip().lower()
+    for tag in event.get("tags", []):
+        if len(tag) >= 2 and tag[0] == "i":
+            return tag[1].strip().lower()
+    return None
+
+
+def addressed_to_us(event: dict, our_pubkey: str) -> bool:
+    """Our job kind, or any job request that p-tags us. Everything else is not ours to answer."""
+    kind = event.get("kind")
+    if not isinstance(kind, int) or not 5000 <= kind < 6000:
+        return False
+    if kind == JOB_KIND:
+        return True
+    return any(len(t) >= 2 and t[0] == "p" and t[1] == our_pubkey for t in event.get("tags", []))
+
+
+def plan_reply(event: dict, catalog: dict) -> dict:
+    """What to answer: {'action': 'result'|'payment'|'error', ...}."""
+    feed = requested_feed(event)
+    if not feed:
+        return {"action": "error", "message": "Name a feed: [\"param\", \"feed\", \"<feed>\"]. Feeds: %s"
+                % ", ".join(sorted({feed_key(e["path"]) for e in catalog.values()}))}
+    entry = catalog.get(feed)
+    if entry is None:
+        return {"action": "error", "message": "Unknown feed %r" % feed}
+    if entry.get("status") != "live":
+        return {"action": "error", "message": "%s is not available yet (coming soon)" % entry["name"]}
+    if entry.get("access") == "free":
+        return {"action": "result", "entry": entry}
+    return {"action": "payment", "entry": entry}
+
+
+def compact_result(entry: dict, body: dict) -> str:
+    """Relay-sized JSON for a job result: lists cut to 10 items, then to 3 if still too big."""
+    for limit in (10, 3):
+        data, cut = truncate(body.get("data"), limit)
+        content = json.dumps({
+            "feed": feed_key(entry["path"]), "name": entry["name"],
+            "full_data_url": PUBLIC + entry["path"], "access": "free",
+            "served_at": body.get("served_at"), "lists_truncated": cut, "data": data,
+        }, separators=(",", ":"))
+        if len(content.encode()) <= MAX_RESULT_BYTES:
+            return content
+    return json.dumps({"feed": feed_key(entry["path"]), "name": entry["name"],
+                       "full_data_url": PUBLIC + entry["path"], "access": "free",
+                       "note": "Result too large for a Nostr event; fetch full_data_url (free)."})
+
+
+class RateLimiter:
+    def __init__(self, per_hour: int, clock=time.time):
+        self.per_hour, self.clock, self.seen = per_hour, clock, defaultdict(deque)
+
+    def allow(self, pubkey: str) -> bool:
+        now, q = self.clock(), self.seen[pubkey]
+        while q and now - q[0] > 3600:
+            q.popleft()
+        if len(q) >= self.per_hour:
+            return False
+        q.append(now)
+        return True
+
+
+# ---------------------------------------------------------------------------
+# Nostr plumbing
+# ---------------------------------------------------------------------------
+def load_key() -> PrivateKey:
+    if os.path.exists(KEY_FILE):
+        with open(KEY_FILE) as fh:
+            return PrivateKey(bytes.fromhex(fh.read().strip()))
+    key = PrivateKey()
+    fd = os.open(KEY_FILE, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w") as fh:
+        fh.write(key.hex())
+    log.warning("Created a new DVM identity in %s", KEY_FILE)
+    return key
+
+
+def signed(key: PrivateKey, kind: int, content: str, tags: list) -> dict:
+    evt = Event(public_key=key.public_key.hex(), content=content, kind=kind, tags=tags,
+                created_at=int(time.time()))
+    key.sign_event(evt)
+    return {"id": evt.id, "pubkey": evt.public_key, "created_at": evt.created_at, "kind": evt.kind,
+            "tags": evt.tags, "content": evt.content, "sig": evt.signature}
+
+
+def announcement(key: PrivateKey, manifest: dict) -> dict:
+    """NIP-89 handler information (kind 31990) for this DVM."""
+    feeds = sorted({feed_key(e["path"]) for e in manifest.get("endpoints", []) if e.get("status") == "live"})
     content = json.dumps({
-        "name": "AurAgrid L402 Oracle Node",
-        "description": "Institutional AI Swarm Data Feeds (Retail & Wholesale). L402 strictly enforced.",
-        "endpoints": list(ROUTE_MAPPING.keys())
+        "name": "AurAgrid Data DVM",
+        "about": "Energy and maritime data from public sources (U.S. EIA, NOAA, ERCOT, IMF PortWatch). "
+                 "Send kind %d with [\"param\",\"feed\",\"<feed>\"]. Free feeds are answered directly; "
+                 "paid feeds return an L402 link and price. Live feeds: %s." % (JOB_KIND, ", ".join(feeds) or "none"),
+        "website": PUBLIC + "/llms.txt",
     })
-    tags = [["d", "auragrid-oracle-v2"], ["k", "5000"], ["t", "l402"], ["t", "wholesale_data"]]
-    
-    evt = Event(public_key=bot_pub, content=content, kind=31990, tags=tags, created_at=int(time.time()))
-    bot_key.sign_event(evt)
-    
-    for relay in RELAYS:
-        try:
-            async with websockets.connect(relay) as ws:
-                await ws.send(json.dumps(["EVENT", event_to_dict(evt)]))
-                print(f"[MANIFEST] Success! Menu live on {relay}")
-        except Exception:
-            pass
+    tags = [["d", "auragrid-data-dvm"], ["k", str(JOB_KIND)]] + [["t", f] for f in feeds]
+    return signed(key, 31990, content, tags)
 
-async def handle_dvm_request(websocket, event_data):
-    """Intercepts swarm queries and generates exact payload invoices."""
-    try:
-        event = event_data[2]
-        kind = event.get("kind")
-        if 5000 <= kind < 6000:
-            job_id = event.get("id")
-            target_topic = "carbon"
-            for tag in event.get("tags", []):
-                if len(tag) >= 2 and tag[0] in ["t", "param"] and tag[1] in ROUTE_MAPPING:
-                    target_topic = tag[1]
 
-            route = ROUTE_MAPPING.get(target_topic, "/esg/carbon")
-            print(f"[LISTENER] Caught Job Request {job_id[:8]} for {target_topic.upper()}")
+class DVM:
+    def __init__(self, key: PrivateKey):
+        self.key, self.pub = key, key.public_key.hex()
+        self.limiter = RateLimiter(JOBS_PER_HOUR)
+        self.handled, self._manifest, self._manifest_at = {}, None, 0.0
+        self.http = httpx.AsyncClient(timeout=15)
 
-            async with httpx.AsyncClient() as client:
-                paywall_resp = await client.get(f"{LOCAL_PAYWALL}{route}")
+    async def manifest(self) -> dict:
+        if self._manifest is None or time.time() - self._manifest_at > MANIFEST_TTL:
+            r = await self.http.get(BACKEND + "/agent-manifest.json")
+            r.raise_for_status()
+            self._manifest, self._manifest_at = r.json(), time.time()
+        return self._manifest
 
-            if paywall_resp.status_code == 402:
-                auth_header = paywall_resp.headers.get("www-authenticate", "")
-                feedback_content = json.dumps({
-                    "status": "payment_required",
-                    "paywall_url": f"{EXTERNAL_PAYWALL}{route}",
-                    "l402_header": auth_header
-                })
-                tags = [["e", job_id], ["p", event.get("pubkey")], ["status", "payment-required"]]
-                
-                reply_event = Event(
-                    public_key=bot_pub, content=feedback_content, kind=7000, 
-                    tags=tags, created_at=int(time.time())
-                )
-                bot_key.sign_event(reply_event)
+    def feedback(self, job: dict, status: str, message: str, extra_tags=()) -> dict:
+        tags = [["status", status, message], ["e", job["id"]], ["p", job["pubkey"]], *extra_tags]
+        return signed(self.key, 7000, json.dumps({"message": message}), tags)
 
-                await websocket.send(json.dumps(["EVENT", event_to_dict(reply_event)]))
-                print(f"[LISTENER] Issued premium L402 invoice for {target_topic.upper()}")
+    async def reply(self, job: dict):
+        """The event to publish for a job, or None to stay silent."""
+        if not addressed_to_us(job, self.pub) or job.get("id") in self.handled:
+            return None
+        self.handled[job["id"]] = time.time()
+        if len(self.handled) > 10000:
+            cutoff = time.time() - 3600
+            self.handled = {k: v for k, v in self.handled.items() if v > cutoff}
+        if not self.limiter.allow(job["pubkey"]):
+            return self.feedback(job, "error", "Rate limit: %d jobs per hour per pubkey" % JOBS_PER_HOUR)
 
-    except Exception as e:
-        print(f"[LISTENER ERROR] {e}")
+        plan = plan_reply(job, catalog_from_manifest(await self.manifest()))
+        if plan["action"] == "error":
+            return self.feedback(job, "error", plan["message"])
+        entry = plan["entry"]
+        if plan["action"] == "payment":
+            q = (await self.http.get(BACKEND + "/api/v1/price" + entry["path"][len("/api/v1"):])).json()
+            msg = "Paid feed: GET %s with L402 (pay the invoice in the 402 response). Current price %s sats." % (
+                PUBLIC + entry["path"], q.get("price_sats"))
+            return self.feedback(job, "payment-required", msg, [["amount", str(int(q["price_sats"]) * 1000)]])
+        r = await self.http.get(BACKEND + entry["path"])
+        if r.status_code != 200:
+            return self.feedback(job, "error", "%s is temporarily unavailable (HTTP %d)" % (entry["name"], r.status_code))
+        tags = [["request", json.dumps(job)], ["e", job["id"]], ["p", job["pubkey"]]]
+        tags += [t for t in job.get("tags", []) if t and t[0] == "i"]
+        log.info("Delivered %s to %s (job %s)", entry["name"], job["pubkey"][:8], job["id"][:8])
+        return signed(self.key, job["kind"] + 1000, compact_result(entry, r.json()), tags)
 
-async def listen_relay(uri):
-    while True:
-        try:
-            async with websockets.connect(uri) as websocket:
-                sub = json.dumps(["REQ", "auragrid-listen", {"kinds": list(range(5000, 6000)), "limit": 10}])
-                await websocket.send(sub)
-                async for message in websocket:
-                    data = json.loads(message)
-                    if isinstance(data, list) and data[0] == "EVENT":
-                        await handle_dvm_request(websocket, data)
-        except Exception:
-            await asyncio.sleep(10)
+    async def run_relay(self, uri: str):
+        while True:
+            try:
+                async with websockets.connect(uri, max_size=2 ** 20) as ws:
+                    since = int(time.time())
+                    await ws.send(json.dumps(["EVENT", announcement(self.key, await self.manifest())]))
+                    await ws.send(json.dumps(["REQ", "auragrid-jobs",
+                                              {"kinds": [JOB_KIND], "since": since},
+                                              {"kinds": list(range(5000, 6000)), "#p": [self.pub], "since": since}]))
+                    log.info("Listening on %s", uri)
+                    async for message in ws:
+                        data = json.loads(message)
+                        if isinstance(data, list) and len(data) >= 3 and data[0] == "EVENT":
+                            try:
+                                out = await self.reply(data[2])
+                            except Exception:
+                                log.exception("Job handling failed")
+                                continue
+                            if out:
+                                await ws.send(json.dumps(["EVENT", out]))
+            except Exception as exc:
+                log.warning("Relay %s: %s; reconnecting in 30s", uri, exc)
+                await asyncio.sleep(30)
 
-async def alpha_hunter():
-    """Dynamically teases premium wholesale endpoints to generate FOMO."""
-    await asyncio.sleep(5) 
-    print(f"[HUNTER] Outbound Swarm Sales Agent active. Pubkey: {bot_pub[:8]}...")
-    wholesale_keys = list(ROUTE_MAPPING.keys())[6:] # Focus marketing on 50k+ sat endpoints
-    
-    while True:
-        try:
-            target = random.choice(wholesale_keys)
-            route = ROUTE_MAPPING[target]
-            teaser = (
-                f"⚡ AURAGRID INSTITUTIONAL SWARM ALERT ⚡\n"
-                f"High-value telemetry matrix available: [{target.upper()}]\n"
-                f"🔒 Unlock full JSON execution payload via L402:\n"
-                f"GET {EXTERNAL_PAYWALL}{route}"
-            )
-            event = Event(public_key=bot_pub, content=teaser, kind=1, created_at=int(time.time()))
-            bot_key.sign_event(event)
-
-            for relay in RELAYS:
-                try:
-                    async with websockets.connect(relay) as ws:
-                        await ws.send(json.dumps(["EVENT", event_to_dict(event)]))
-                except Exception:
-                    pass
-            
-            print(f"[HUNTER] Teased premium {target.upper()} matrix to network.")
-            await asyncio.sleep(900)
-        except Exception:
-            await asyncio.sleep(60)
 
 async def main():
-    print("⚡ AurAgrid Dual-Threat Nostr Swarm Initializing...")
-    await broadcast_dvm_manifest()
-    tasks = [listen_relay(relay) for relay in RELAYS]
-    tasks.append(alpha_hunter())
-    await asyncio.gather(*tasks)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+    dvm = DVM(load_key())
+    log.info("AurAgrid DVM %s, job kind %d, relays: %s", dvm.key.public_key.bech32(), JOB_KIND, ", ".join(RELAYS))
+    await asyncio.gather(*(dvm.run_relay(r) for r in RELAYS))
+
 
 if __name__ == "__main__":
     asyncio.run(main())
