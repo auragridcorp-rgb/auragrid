@@ -25,6 +25,10 @@ os.environ.update({
     "AURAGRID_SAMPLE_DELAY": "0",
     "AURAGRID_ADMIN_USER": "op",
     "AURAGRID_ADMIN_PASSWORD": "pw",
+    "AURAGRID_NDBC_ENABLED": "0",   # no network in tests
+    # frozen copies, so the tests do not depend on what is currently live
+    "AURAGRID_PRICING_CONFIG": os.path.join(ROOT, "tests", "fixtures", "pricing.yaml"),
+    "AURAGRID_APERTURE_CONFIG": os.path.join(ROOT, "tests", "fixtures", "aperture.yaml"),
 })
 os.environ.pop("AURAGRID_ATTEST_MACAROON", None)
 os.environ.pop("ERCOT_SUBSCRIPTION_KEY", None)
@@ -225,7 +229,7 @@ class AttestationSkipTests(unittest.TestCase):
 class GeneratorTests(unittest.TestCase):
     def setUp(self):
         import yaml
-        with open("aperture.yaml") as fh:
+        with open(os.environ["AURAGRID_APERTURE_CONFIG"]) as fh:
             self.base = yaml.safe_load(fh)
         self.plans = backend.PLANS
 

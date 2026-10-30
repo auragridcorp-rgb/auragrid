@@ -68,8 +68,32 @@ def check_samples(base):
             record("FAIL", label, "bad body: %s" % exc)
 
 
-def check_quotes(base):
-    for path in ["/api/v1/price/pro/ercot-lmp", "/api/v1/price/bundle/ercot-lmp"]:
+def check_offer(base, manifest):
+    """Every advertised endpoint behaves as its manifest entry says."""
+    for e in manifest.get("endpoints", []):
+        path, label = e["path"], e["path"].rsplit("/", 1)[-1]
+        if e.get("access") == "paid":
+            check_paid(base, path, "paywall " + label)
+            continue
+        r = get(base, path)
+        if r.status_code == 402:
+            record("FAIL", "free " + label, "free endpoint asks for payment")
+        elif e.get("status") == "live":
+            record("PASS" if r.status_code == 200 else "FAIL", "free " + label, "HTTP %d" % r.status_code)
+        else:
+            record("PASS" if r.status_code == 503 else "WARN", "free " + label,
+                   "coming soon, HTTP %d" % r.status_code)
+    for plan in manifest.get("plans", []):
+        check_paid(base, plan["paths"][0], "paywall plan " + plan["name"])
+    if not any(e.get("access") == "paid" for e in manifest.get("endpoints", [])) and not manifest.get("plans"):
+        print("INFO  nothing is for sale: no paid endpoints or plans in the manifest")
+
+
+def check_quotes(base, manifest):
+    paths = ["/api/v1/price/" + e["path"][len("/api/v1/"):] for e in manifest.get("endpoints", [])
+             if e.get("access") == "paid"]
+    paths += ["/api/v1/price/" + p["paths"][0][len("/api/v1/"):] for p in manifest.get("plans", [])]
+    for path in paths:
         r = get(base, path)
         try:
             q = r.json()
@@ -84,7 +108,7 @@ def check_quotes(base):
 
 
 def check_discovery(base):
-    for path in ["/agent-manifest.json", "/.well-known/ai-plugin.json", "/openapi.json", "/llms.txt", "/buy"]:
+    for path in ["/agent-manifest.json", "/.well-known/ai-plugin.json", "/openapi.json", "/llms.txt", "/buy", "/terms"]:
         r = get(base, path)
         record("PASS" if r.status_code == 200 else ("WARN" if path == "/llms.txt" else "FAIL"), "public " + path,
                "HTTP %d" % r.status_code)
@@ -132,18 +156,23 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base", required=True, help="public base URL, e.g. https://oracle.example.com")
     ap.add_argument("--ip", help="server public IP for the port exposure checks")
-    ap.add_argument("--paid-path", default="/api/v1/wholesale/ercot-lmp")
+    ap.add_argument("--paid-path", help="extra path that must answer 402 (paid endpoints in the manifest are checked anyway)")
     ap.add_argument("--aperture-port", type=int, default=8080, help="port Aperture listens on")
     ap.add_argument("--backend-port", type=int, default=8000, help="port the FastAPI backend listens on")
     args = ap.parse_args(argv)
     base = args.base.rstrip("/")
     if base.startswith("http://") and not any(h in base for h in ("127.0.0.1", "localhost")):
         record("WARN", "transport", "base URL is plain http: macaroons/preimages travel unencrypted")
-    check_paid(base, args.paid_path, "paywall hourly")
-    check_paid(base, "/api/v1/pro/ercot-lmp", "paywall 30-day pass")
-    check_paid(base, "/api/v1/bundle/ercot-lmp", "paywall bundle")
+    try:
+        manifest = get(base, "/agent-manifest.json").json()
+    except Exception as exc:
+        record("FAIL", "manifest", str(exc))
+        manifest = {}
+    if args.paid_path:
+        check_paid(base, args.paid_path, "paywall " + args.paid_path)
+    check_offer(base, manifest)
     check_samples(base)
-    check_quotes(base)
+    check_quotes(base, manifest)
     check_discovery(base)
     check_operator_locked(base)
     if args.ip:
