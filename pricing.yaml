@@ -14,6 +14,7 @@ endpoints:
 #     `usd` at the BTC price when it runs (or set `sats` to pin it)
 plans:
   ercot-pro-pass:
+    enabled: false   # turn on once ERCOT credentials are in feeds.env (ercot-lmp must be paid)
     title: ERCOT LMP Pro Pass (30 days)
     kind: pass_30d
     prefix: pro
@@ -21,9 +22,22 @@ plans:
     usd: 49.00
     timeout: 2592000
   hero-bundle:
+    enabled: false   # its other feeds are free now; revisit when premium versions exist
     title: Hero Bundle - ERCOT LMP + LNG Supply Chain + Port Activity (30 days)
     kind: bundle
     prefix: bundle
     feeds: [ercot-lmp, lng-supply-chain, port-congestion-index]
     usd: 99.00
     timeout: 2592000
+
+# Which feeds are offered. Only list a feed once its data source is connected
+# (or it shows as "coming soon"); never list one as paid without a source, or
+# buyers pay for a 503. Feeds in neither list are not offered at all.
+# After editing: python gen_aperture.py (and the --out ~/.aperture/... run), restart.
+access:
+  free:                       # no payment; rate-limited per client IP by Aperture
+    feeds: [maritime-weather, lng-supply-chain, port-congestion-index]
+    requests_per_minute: 30
+    burst: 10
+  paid:                       # hourly L402 tokens
+    feeds: []                 # add ercot-lmp once ERCOT credentials are configured
