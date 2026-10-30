@@ -50,7 +50,7 @@ BUY_HTML = """<!DOCTYPE html>
   <h2>30-day passes and bundles</h2>
   <div id="plans"><div class="meta">Loading...</div></div>
 
-  <h2>Hourly access</h2>
+  <h2>Paid endpoints (hourly access)</h2>
   <div id="hourly"><div class="meta">Loading...</div></div>
 
   <h2>Free samples</h2>
@@ -148,8 +148,16 @@ BUY_HTML = """<!DOCTYPE html>
       plans.appendChild(card(p.title, days + "-day token, one payment" +
         (p.paths.length > 1 ? "; one token opens all " + p.paths.length + " feeds" : ""), p, actions));
     });
-    const heroes = new Set((manifest.samples || []).map((s) => s.feed));
-    (manifest.endpoints || []).filter((e) => heroes.has(e.path.split("/").pop())).forEach((e) => {
+    const paid = (manifest.endpoints || []).filter((e) => e.access === "paid" && e.status === "live");
+    if (!(manifest.plans || []).length) plans.appendChild(el("div", "meta", "No passes on sale right now."));
+    if (!paid.length) {
+      const note = el("div", "meta", "Nothing to buy here right now: every live endpoint is free. ");
+      const a = el("a", "", "See the free endpoints");
+      a.href = "/llms.txt";
+      note.appendChild(a);
+      hourly.appendChild(note);
+    }
+    paid.forEach((e) => {
       const hours = Math.round((e.token_ttl_seconds || 3600) / 3600);
       hourly.appendChild(card(e.name, e.description + " Token valid " + hours + "h.", e,
         [button(validToken(e.path) ? "Open" : "Buy", e.path, e.name, e.token_ttl_seconds)]));

@@ -1,0 +1,37 @@
+# USD targets for the pricer (pricer.py). Keys are feed paths without the
+# /api/v1/batch|wholesale prefix. Anything not listed keeps its static
+# aperture.yaml price.
+endpoints:
+  ercot-lmp: 15.00
+  dark-fleet-matrix: 20.00
+  naval-escalation: 25.00
+  lng-supply-chain: 10.00
+
+# 30-day passes and bundles (pass_support.py). After editing, regenerate
+# Aperture's config with `python gen_aperture.py` and restart Aperture.
+#   - single-feed plans with `usd` are USD-pegged through the pricer
+#   - multi-feed bundles get a static sat price: gen_aperture.py converts
+#     `usd` at the BTC price when it runs (or set `sats` to pin it)
+plans:
+  ercot-pro-pass:
+    title: ERCOT LMP Pro Pass (30 days)
+    kind: pass_30d
+    prefix: pro
+    feeds: [ercot-lmp]
+    usd: 49.00
+    timeout: 2592000
+  hero-bundle:
+    title: Hero Bundle - ERCOT LMP + LNG Supply Chain + Port Activity (30 days)
+    kind: bundle
+    prefix: bundle
+    feeds: [ercot-lmp, lng-supply-chain, port-congestion-index]
+    usd: 99.00
+    timeout: 2592000
+
+access:
+  free:
+    feeds: [lng-supply-chain, maritime-weather]
+    requests_per_minute: 30
+    burst: 10
+  paid:
+    feeds: [ercot-lmp, port-congestion-index, agri-yield]

@@ -86,6 +86,8 @@ def load_plans(pricing_config: str = "pricing.yaml") -> list:
 def parse_plans(raw: dict) -> list:
     plans, prefixes = [], set()
     for name, spec in (raw or {}).items():
+        if spec.get("enabled") is False:
+            continue   # kept in pricing.yaml for later, not sold now
         try:
             plan = Plan(
                 name=str(name),
@@ -117,6 +119,43 @@ def parse_plans(raw: dict) -> list:
         prefixes.add(plan.prefix)
         plans.append(plan)
     return plans
+
+
+@dataclass(frozen=True)
+class Access:
+    """Which feeds are offered, from pricing.yaml `access:`. Feeds in neither list
+    are not offered at all (no route, not in the manifest, not sold by Aperture)."""
+    free: tuple = ()          # served without payment, rate-limited per client IP
+    paid: tuple = ()          # hourly L402 tokens
+    requests_per_minute: int = 30
+    burst: int = 10
+
+    @property
+    def offered(self) -> set:
+        return set(self.free) | set(self.paid)
+
+
+def feed_path(key: str, batch_prefix: str = "batch") -> str:
+    """'ercot-lmp' -> '/api/v1/batch/ercot-lmp'; 'esg/carbon' -> '/api/v1/esg/carbon'."""
+    return "/api/v1/" + (key if "/" in key else "%s/%s" % (batch_prefix, key))
+
+
+def load_access(pricing_config: str = "pricing.yaml") -> Access:
+    try:
+        import yaml
+        with open(pricing_config) as fh:
+            raw = (yaml.safe_load(fh) or {}).get("access") or {}
+    except FileNotFoundError:
+        raw = {}
+    free = raw.get("free") or {}
+    paid = raw.get("paid") or {}
+    access = Access(free=tuple(free.get("feeds") or ()), paid=tuple(paid.get("feeds") or ()),
+                    requests_per_minute=int(free.get("requests_per_minute", 30)),
+                    burst=int(free.get("burst", 10)))
+    both = set(access.free) & set(access.paid)
+    if both:
+        raise ValueError("feeds listed as both free and paid in %s: %s" % (pricing_config, sorted(both)))
+    return access
 
 
 class PlanRouter:
