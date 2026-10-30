@@ -36,7 +36,7 @@ plans:
 # After editing: python gen_aperture.py (and the --out ~/.aperture/... run), restart.
 access:
   free:                       # no payment; rate-limited per client IP by Aperture
-    feeds: [maritime-weather, lng-supply-chain, port-congestion-index]
+    feeds: [maritime-weather, energy/grid, spr-stockpile, lng-supply-chain, port-congestion-index]
     requests_per_minute: 30
     burst: 10
   paid:                       # hourly L402 tokens
