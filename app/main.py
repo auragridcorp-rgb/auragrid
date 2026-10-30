@@ -82,7 +82,9 @@ from pass_support import HOURLY, PlanRewriteMiddleware, PlanRouter, load_access,
 from pricer import PriceEngine, normalize_path
 from samples import SAMPLE_FEEDS, SampleStore, resolve as resolve_sample
 from sample_examples import example_body
+import eia_grid_feed
 import eia_lng_feed
+import eia_spr_feed
 import ercot_feed
 import ndbc_feed
 import portwatch_feed
@@ -90,6 +92,8 @@ import portwatch_feed
 ercot_feed.register_from_env()       # ercot-lmp, when ERCOT credentials are configured
 portwatch_feed.register_from_env()   # port-congestion-index, when AURAGRID_PORTWATCH_ENABLED=1
 eia_lng_feed.register_from_env()     # lng-supply-chain, when EIA_API_KEY is configured
+eia_grid_feed.register_from_env()    # energy/grid, same key
+eia_spr_feed.register_from_env()     # spr-stockpile, same key
 ndbc_feed.register_from_env()        # maritime-weather (NOAA buoys; no key needed)
 
 log = logging.getLogger("auragrid")
@@ -125,8 +129,9 @@ CATALOG = [
     # slug (path after /api/v1/), display name, tier, description
     ("esg/carbon", "ESG Carbon", "retail",
      "Satellite-verified ESG carbon offset telemetry."),
-    ("energy/grid", "Energy Grid", "retail",
-     "Real-time energy grid frequency and renewable mix."),
+    ("energy/grid", "U.S. Grid Demand and Generation Mix", "retail",
+     "Hourly demand, forecast, interchange and generation by fuel with renewable/carbon-free shares "
+     "for the Lower 48, EIA regions and every balancing authority (U.S. EIA-930)."),
     ("sar/commodities", "SAR Commodities", "retail",
      "Synthetic aperture radar (SAR) commodity volume estimates."),
     ("maritime/congestion", "Maritime Congestion", "retail",
@@ -158,8 +163,9 @@ CATALOG = [
      "plus chokepoint transits (IMF PortWatch, satellite AIS; updated weekly)."),
     ("batch/carbon-credit-audit", "Multi-Project Carbon Credit Audit Matrix", "wholesale",
      "Satellite carbon credit verification matrix."),
-    ("batch/spr-stockpile", "Batch SPR Stockpile Estimates", "wholesale",
-     "Strategic Petroleum Reserve stockpile estimates."),
+    ("batch/spr-stockpile", "U.S. Strategic Petroleum Reserve Monitor", "wholesale",
+     "Weekly SPR and commercial crude stocks with 1/4/52-week changes, 52-week range and history "
+     "(U.S. EIA Weekly Petroleum Status Report)."),
     ("batch/critical-minerals", "Batch Critical Minerals Tracker", "wholesale",
      "Critical minerals and rare-earth supply chain tracker."),
     ("batch/naval-escalation", "Batch Naval Escalation Risk", "wholesale",
