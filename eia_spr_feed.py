@@ -90,6 +90,13 @@ def fetch(session, api_key: str, today=None) -> dict:
     return build_snapshot(rows)
 
 
+feeds.describe(
+    "spr-stockpile", source="U.S. Energy Information Administration (EIA), Weekly Petroleum Status Report",
+    url="https://api.eia.gov/v2/petroleum/stoc/wstk/", terms_url="https://www.eia.gov/about/copyrights_reuse.php",
+    attribution="Source: U.S. Energy Information Administration. Public domain; EIA does not endorse AurAgrid.",
+    as_of=lambda snap: snap["spr"]["week_ending"])
+
+
 def register_from_env() -> bool:
     key = os.environ.get("EIA_API_KEY")
     if not key:

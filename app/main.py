@@ -672,10 +672,14 @@ def _feed_handler(slug: str):
         except Exception:
             log.exception("Provider for %s failed", key)
             raise HTTPException(status_code=502, detail="Feed temporarily unavailable")
+        data = dict(data)
+        retrieved_at, stale = data.pop("fetched_at", None), bool(data.pop("stale", False))
         return {
             "feed": key,
             "plan": getattr(request.state, "auragrid_plan_kind", HOURLY),
             "served_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "stale": stale,
+            "provenance": feeds.provenance(key, data, retrieved_at),
             "data": data,
         }
 

@@ -26,8 +26,8 @@ AURAGRID_DVM_KEY_FILE      hex private key (default: dvm/dvm_key.txt next to thi
 AURAGRID_DVM_RELAYS        comma-separated relay URLs
 AURAGRID_DVM_JOB_KIND      default 5990
 AURAGRID_DVM_JOBS_PER_HOUR per requesting pubkey (default 20)
-AURAGRID_BACKEND_URL       backend for manifest/data/quotes (default http://127.0.0.1:8001)
-AURAGRID_PUBLIC_URL        public base URL put in results (default http://84.12.79.124:8000)
+AURAGRID_BACKEND_URL       backend for manifest/data/quotes (default http://127.0.0.1:8000)
+AURAGRID_PUBLIC_URL        public base URL put in results (default http://84.12.79.124:8080)
 """
 import asyncio
 import json
@@ -53,8 +53,8 @@ RELAYS = [r.strip() for r in os.environ.get(
     "AURAGRID_DVM_RELAYS", "wss://relay.damus.io,wss://nos.lol,wss://relay.primal.net").split(",") if r.strip()]
 JOB_KIND = int(os.environ.get("AURAGRID_DVM_JOB_KIND", "5990"))
 JOBS_PER_HOUR = int(os.environ.get("AURAGRID_DVM_JOBS_PER_HOUR", "20"))
-BACKEND = os.environ.get("AURAGRID_BACKEND_URL", "http://127.0.0.1:8001").rstrip("/")
-PUBLIC = os.environ.get("AURAGRID_PUBLIC_URL", "http://84.12.79.124:8000").rstrip("/")
+BACKEND = os.environ.get("AURAGRID_BACKEND_URL", "http://127.0.0.1:8000").rstrip("/")
+PUBLIC = os.environ.get("AURAGRID_PUBLIC_URL", "http://84.12.79.124:8080").rstrip("/")
 MAX_RESULT_BYTES = 60_000      # most relays reject events much larger than ~64 KB
 MANIFEST_TTL = 300
 
