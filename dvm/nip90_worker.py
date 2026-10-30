@@ -241,6 +241,10 @@ class DVM:
                     log.info("Listening on %s", uri)
                     async for message in ws:
                         data = json.loads(message)
+                        if isinstance(data, list) and len(data) >= 3 and data[0] == "OK" and data[2] is False:
+                            log.warning("%s rejected event %s: %s", uri, str(data[1])[:8],
+                                        data[3] if len(data) > 3 else "")
+                            continue
                         if isinstance(data, list) and len(data) >= 3 and data[0] == "EVENT":
                             try:
                                 out = await self.reply(data[2])
