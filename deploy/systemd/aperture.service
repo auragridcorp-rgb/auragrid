@@ -1,0 +1,17 @@
+[Unit]
+Description=Lightning Labs Aperture L402 Proxy
+After=network.target auragrid-api.service auragrid-pricer.service
+
+[Service]
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/AurAgrid
+ExecStart=/home/ubuntu/AurAgrid/scripts/run_aperture.sh
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aperture
+
+[Install]
+WantedBy=multi-user.target
