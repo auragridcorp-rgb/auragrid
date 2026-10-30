@@ -631,6 +631,8 @@ def _feed_handler(slug: str):
         except feeds.FeedNotConnected:
             log.error("Paid request for %s, but no provider is registered in feeds.py", key)
             raise HTTPException(status_code=503, detail="Feed not connected")
+        except feeds.FeedWarmingUp:
+            raise HTTPException(status_code=503, detail="Feed warming up", headers={"Retry-After": "300"})
         except Exception:
             log.exception("Provider for %s failed", key)
             raise HTTPException(status_code=502, detail="Feed temporarily unavailable")

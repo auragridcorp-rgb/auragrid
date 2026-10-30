@@ -106,6 +106,8 @@ class SampleStore:
         for key in SAMPLE_FEEDS:
             try:
                 data = self.fetch(key)
+            except feeds.FeedWarmingUp:
+                continue   # its background refresh has not finished yet; next round
             except feeds.FeedNotConnected:
                 if key not in self._unconnected_logged:
                     log.warning("Sample feed %s has no provider registered in feeds.py; it will stay 503", key)
