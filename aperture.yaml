@@ -14,13 +14,13 @@ services:
   hostregexp: .*
   address: 127.0.0.1:8000
   protocol: http
-  pathregexp: ^(/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/port\-congestion\-index)$
+  pathregexp: ^(/api/v1/energy/grid|/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/port\-congestion\-index|/api/v1/batch/spr\-stockpile)$
   auth: 'off'
   authwhitelistpaths:
-  - ^(/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/port\-congestion\-index)$
+  - ^(/api/v1/energy/grid|/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/port\-congestion\-index|/api/v1/batch/spr\-stockpile)$
   price: 0
   ratelimits:
-  - pathregexp: ^(/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/port\-congestion\-index)$
+  - pathregexp: ^(/api/v1/energy/grid|/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/port\-congestion\-index|/api/v1/batch/spr\-stockpile)$
     requests: 30
     per: 1m
     burst: 10
