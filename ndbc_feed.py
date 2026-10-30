@@ -130,6 +130,14 @@ class NDBCFetcher:
         return build_snapshot(self._get(OBS_URL), self.stations())
 
 
+feeds.describe(
+    "maritime-weather", source="NOAA National Data Buoy Center (NDBC)",
+    url="https://www.ndbc.noaa.gov/data/latest_obs/latest_obs.txt",
+    terms_url="https://www.weather.gov/disclaimer",
+    attribution="Source: NOAA National Data Buoy Center. Public domain; NOAA does not endorse AurAgrid.",
+    as_of=lambda snap: snap["observed_between"][1])
+
+
 def register_from_env() -> bool:
     if os.environ.get("AURAGRID_NDBC_ENABLED", "1") != "1":
         return False
