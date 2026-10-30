@@ -1,58 +1,59 @@
-import os
-import requests
-import urllib3
+"""Read-only LND REST client for the operator dashboard.
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+Uses a readonly macaroon and verifies LND's TLS certificate. Every failure
+raises: the dashboard shows "LND unavailable" (HTTP 502) rather than numbers
+that did not come from the node.
+
+Environment (all optional)
+--------------------------
+LND_REST_URL            default https://127.0.0.1:8081
+LND_TLS_CERT            default ~/.lnd/tls.cert
+LND_READONLY_MACAROON   default ~/.lnd/data/chain/bitcoin/mainnet/readonly.macaroon
+LND_MAX_INVOICES        newest invoices fetched per refresh (default 5000)
+"""
+import os
+
+import requests
+
+_HOME = os.path.expanduser("~")
+
 
 class LNDClient:
     def __init__(self):
-        self.host = os.getenv("LND_HOST", "localhost:10009")
-        self.macaroon_path = os.getenv("LND_MACAROON_PATH", "/home/ubuntu/.lnd/data/chain/bitcoin/mainnet/admin.macaroon")
-        self.rest_port = "8080" # Default LND REST port if configured, or proxy
-        self.headers = {}
-        self.load_macaroon()
+        self.base_url = os.environ.get("LND_REST_URL", "https://127.0.0.1:8081").rstrip("/")
+        self.tls_cert = os.environ.get("LND_TLS_CERT", os.path.join(_HOME, ".lnd", "tls.cert"))
+        self.macaroon_path = os.environ.get(
+            "LND_READONLY_MACAROON",
+            os.path.join(_HOME, ".lnd", "data", "chain", "bitcoin", "mainnet", "readonly.macaroon"))
+        self.max_invoices = int(os.environ.get("LND_MAX_INVOICES", "5000"))
+        self.session = requests.Session()
 
-    def load_macaroon(self):
-        try:
-            if os.path.exists(self.macaroon_path):
-                with open(self.macaroon_path, "rb") as f:
-                    macaroon_hex = f.read().hex()
-                self.headers = {"Grpc-Metadata-macaroon": macaroon_hex}
-        except Exception as e:
-            print("Error loading macaroon:", e)
+    def _get(self, endpoint: str, params=None) -> dict:
+        with open(self.macaroon_path, "rb") as fh:
+            macaroon = fh.read().hex()
+        resp = self.session.get(self.base_url + endpoint, params=params, timeout=5,
+                                headers={"Grpc-Metadata-macaroon": macaroon}, verify=self.tls_cert)
+        resp.raise_for_status()
+        return resp.json()
 
-    def _make_request(self, endpoint, method="GET", data=None):
-        url = f"https://{self.host.split(':')[0]}:{self.rest_port}/{endpoint}"
-        try:
-            if method == "GET":
-                resp = requests.get(url, headers=self.headers, verify=False, timeout=3)
-            else:
-                resp = requests.post(url, headers=self.headers, json=data, verify=False, timeout=3)
-            if resp.status_code == 200:
-                return resp.json()
-        except Exception:
-            pass
-        return {}
+    def get_invoices(self) -> list:
+        data = self._get("/v1/invoices", {"num_max_invoices": self.max_invoices, "reversed": "true"})
+        return data.get("invoices") or []
 
-    def get_invoices(self):
-        # Fallback to simulated/live hybrid if REST endpoint is offline
-        data = self._make_request("v1/invoices")
-        if data and "invoices" in data:
-            return data["invoices"]
-        # Return fallback live invoice records matching your node state
-        return [
-            {"r_hash": "abc1", "value": "500", "memo": "L402", "settled": False, "creation_date": "1729950000"},
-            {"r_hash": "abc2", "value": "3737", "memo": "AurAgrid L402 Access: /api/v1/esg/carbon", "settled": False, "creation_date": "1729951000"},
-            {"r_hash": "abc3", "value": "15000", "memo": "Mainnet Lightning Routing Liquidity", "settled": True, "creation_date": "1729952000"},
-            {"r_hash": "abc4", "value": "10000", "memo": "SAR Commodities Tracking Stream", "settled": True, "creation_date": "1729953000"}
-        ]
+    def get_channels(self) -> dict:
+        return self._get("/v1/channels")
 
-    def get_mainnet_node_stats(self):
+    def get_mainnet_node_stats(self) -> dict:
+        info = self._get("/v1/getinfo")
+        channels = self.get_channels().get("channels") or []
+        chains = info.get("chains") or [{}]
         return {
-            "node_alias": "auragrid-mainnet",
-            "network": "Bitcoin Mainnet",
-            "active_channels": 4,
-            "total_capacity": 2500000
+            "node_alias": info.get("alias"),
+            "network": chains[0].get("network"),
+            "active_channels": int(info.get("num_active_channels") or 0),
+            "total_capacity": sum(int(c.get("capacity") or 0) for c in channels),
+            "synced_to_chain": bool(info.get("synced_to_chain")),
         }
+
 
 lnd = LNDClient()
