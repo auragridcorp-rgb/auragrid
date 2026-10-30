@@ -15,6 +15,10 @@ the data is free from the IMF. So the provider is only registered when
 AURAGRID_PORTWATCH_ENABLED=1, which you should set once copyright@imf.org has
 granted permission. Every snapshot carries the attribution and notices.
 
+Refreshing runs in a background thread (feeds.BackgroundFeed): a rebuild takes
+minutes, so requests always get the last finished snapshot, which is also
+saved to disk for restarts.
+
 Load on PortWatch: every AURAGRID_PORTWATCH_CACHE_SECONDS (default 6h) one
 query checks for new data. Only when a new week is published are ~11 small
 aggregate queries run for the 100 ranked ports; choosing those 100 (scanning
@@ -257,11 +261,16 @@ def register_from_env() -> bool:
         return False
     session = requests.Session()
     session.headers["User-Agent"] = "AurAgrid-PortWatch/1.0 (aggregate queries, refreshed only when new data is published)"
-    feeds.provider("port-congestion-index")(feeds.CachedFeed(
-        IncrementalSnapshot(session, state_path=os.environ.get("AURAGRID_PORTWATCH_STATE",
-                                                               "portwatch_ranking.json")),
-        float(os.environ.get("AURAGRID_PORTWATCH_CACHE_SECONDS", str(6 * 3600))),
-        float(os.environ.get("AURAGRID_PORTWATCH_MAX_STALE_SECONDS", str(10 * 86400))),
-        retry_seconds=600))
+    snapshots = IncrementalSnapshot(session, state_path=os.environ.get("AURAGRID_PORTWATCH_STATE",
+                                                                    "portwatch_ranking.json"))
+    feed = feeds.BackgroundFeed(
+        snapshots,
+        interval=float(os.environ.get("AURAGRID_PORTWATCH_CACHE_SECONDS", str(6 * 3600))),
+        max_stale=float(os.environ.get("AURAGRID_PORTWATCH_MAX_STALE_SECONDS", str(10 * 86400))),
+        retry_seconds=600,
+        state_path=os.environ.get("AURAGRID_PORTWATCH_SNAPSHOT", "portwatch_snapshot.json"),
+        name="portwatch")
+    snapshots.last = feed.current()   # saved snapshot: skip the rebuild if PortWatch has nothing newer
+    feeds.provider("port-congestion-index")(feed.start())
     log.info("port-congestion-index provider registered (IMF PortWatch)")
     return True
