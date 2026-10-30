@@ -27,3 +27,4 @@ __pycache__/
 # Feed credentials
 feeds.env
 portwatch_ranking.json
+portwatch_snapshot.json
