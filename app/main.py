@@ -69,6 +69,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
@@ -77,17 +78,19 @@ from app.buy_page import BUY_HTML
 from app.lnd_client import lnd
 from attestation import AttestationMiddleware, lnd_rest_signer
 from l402_ledger import L402LedgerMiddleware, Ledger, hash_hex, token_payment_hash
-from pass_support import HOURLY, PlanRewriteMiddleware, PlanRouter, load_plans
+from pass_support import HOURLY, PlanRewriteMiddleware, PlanRouter, load_access, load_plans
 from pricer import PriceEngine, normalize_path
 from samples import SAMPLE_FEEDS, SampleStore, resolve as resolve_sample
 from sample_examples import example_body
 import eia_lng_feed
 import ercot_feed
+import ndbc_feed
 import portwatch_feed
 
 ercot_feed.register_from_env()       # ercot-lmp, when ERCOT credentials are configured
 portwatch_feed.register_from_env()   # port-congestion-index, when AURAGRID_PORTWATCH_ENABLED=1
 eia_lng_feed.register_from_env()     # lng-supply-chain, when EIA_API_KEY is configured
+ndbc_feed.register_from_env()        # maritime-weather (NOAA buoys; no key needed)
 
 log = logging.getLogger("auragrid")
 
@@ -141,8 +144,9 @@ CATALOG = [
      "Soil moisture and precipitation matrices across agricultural belts."),
     ("batch/sts-anomalies", "Batch STS Transfer Anomalies", "wholesale",
      "Open-ocean ship-to-ship (STS) cargo transfer tracking."),
-    ("batch/maritime-weather", "Batch Maritime Weather Routing", "wholesale",
-     "Wind, wave, and swell routing optimizations for shipping fleets."),
+    ("batch/maritime-weather", "Marine Weather Observations", "wholesale",
+     "Latest wind, gust, wave height/period/direction, pressure and air/sea temperature from "
+     "~850 NOAA NDBC buoys and coastal stations worldwide (updated continuously)."),
     ("batch/curtailment-risk", "Batch Renewable Curtailment Risk", "wholesale",
      "Renewable energy curtailment predictions for wind/solar."),
     ("batch/dark-fleet-matrix", "Global Dark Fleet Gap Matrix", "wholesale",
@@ -177,6 +181,19 @@ APERTURE_CONFIG = os.environ.get("AURAGRID_APERTURE_CONFIG", "aperture.yaml")
 PRICING_CONFIG = os.environ.get("AURAGRID_PRICING_CONFIG", "pricing.yaml")
 PLANS = load_plans(PRICING_CONFIG)
 PLAN_ROUTER = PlanRouter(PLANS, feed_route_prefix=BATCH_PREFIX)
+ACCESS = load_access(PRICING_CONFIG)
+
+
+def feed_key(slug: str) -> str:
+    return normalize_path("/api/v1/" + slug)
+
+
+# Only feeds listed in pricing.yaml `access:` are offered; the rest have no data source yet.
+OFFERED = [entry for entry in CATALOG if feed_key(entry[0]) in ACCESS.offered]
+PAID_CATALOG = [entry for entry in OFFERED if feed_key(entry[0]) in ACCESS.paid]
+_unknown = ACCESS.offered - {feed_key(slug) for slug, _, _, _ in CATALOG}
+if _unknown:
+    log.error("pricing.yaml access lists feeds that are not in the catalog: %s", ", ".join(sorted(_unknown)))
 _catalog_slugs = {slug for slug, _, _, _ in CATALOG}
 for _plan in PLANS:
     for _feed in _plan.feeds:
@@ -208,7 +225,7 @@ def build_pricing(services: list):
             log.warning("Invalid pathregexp in Aperture service %r", svc.get("name"))
 
     pricing, unmatched = {}, []
-    for slug, _, _, _ in CATALOG:
+    for slug, _, _, _ in PAID_CATALOG:   # free feeds have no paid rule by design
         path = "/api/v1/" + slug
         hit = next((svc for svc, rx in rules if rx.match(path)), None)
         if hit is None:
@@ -227,7 +244,7 @@ def build_pricing(services: list):
             if hit is None or hit.get("name") != plan.name:
                 unmatched.append("%s (plan %s)" % (path, plan.name))
 
-    paths = ["/api/v1/" + slug for slug, _, _, _ in CATALOG]
+    paths = ["/api/v1/" + slug for slug, _, _, _ in OFFERED]
     paths += [p for plan in PLANS for p in plan.paths()]
     paths += ["/api/v1/sample/" + key for key in SAMPLE_FEEDS] + ["/buy"]
     dead = [svc.get("name") for svc, rx in rules if not any(rx.match(p) for p in paths)]
@@ -259,6 +276,9 @@ if _attest_macaroon:
     )
 else:
     log.warning("AURAGRID_ATTEST_MACAROON not set: responses will NOT carry X-AurAgrid-Signature-V2")
+# Outermost: compress responses (a full marine snapshot is ~420 KB raw, ~40 KB gzipped), which
+# keeps outbound traffic far inside the OCI free allowance. Attestation signs the uncompressed body.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 PRICING, _unmatched, _dead_rules = build_pricing(load_aperture_services(APERTURE_CONFIG))
 if _unmatched:
     log.warning("Catalog paths NOT covered by any Aperture rule (served unpaid or not at all): %s",
@@ -501,9 +521,15 @@ def proxy_services():
 # ---------------------------------------------------------------------------
 def _catalog_entries() -> list[dict]:
     entries = []
-    for slug, name, tier, desc in CATALOG:
-        entry = {"path": "/api/v1/" + slug, "name": name, "tier": tier,
-                 "description": desc, "auth": "L402"}
+    for slug, name, tier, desc in OFFERED:
+        free = feed_key(slug) in ACCESS.free
+        entry = {"path": "/api/v1/" + slug, "name": name, "tier": tier, "description": desc,
+                 "access": "free" if free else "paid", "auth": "none" if free else "L402",
+                 "status": "live" if feeds.get(feed_key(slug)) else "coming_soon"}
+        if free:
+            entry["rate_limit"] = "%d requests/minute per IP" % ACCESS.requests_per_minute
+            entries.append(entry)
+            continue
         info = PRICING.get(slug, {})
         if info.get("price_sats") is not None:
             entry["price_sats"] = info["price_sats"]
@@ -554,8 +580,11 @@ async def get_agent_manifest(request: Request):
         "name_for_human": "AurAgrid L402 Oracle",
         "name_for_model": "auragrid_oracle",
         "description_for_model": (
-            "Oracle providing %d real-time ESG, energy, maritime, and wholesale telemetry "
-            "endpoints. All endpoints require L402 Lightning Network payments. On a 402 "
+            "AurAgrid serves %d energy and maritime data endpoints built from public sources "
+            "(U.S. EIA, NOAA, ERCOT, IMF PortWatch); each response names its source. Endpoints "
+            "with access 'free' need no payment and are rate-limited per IP (see terms_url); only "
+            "use endpoints whose status is 'live'. Endpoints with access 'paid' use L402 Lightning "
+            "payments. On a 402 "
             "Payment Required, extract the invoice and macaroon from the WWW-Authenticate "
             "header, pay the invoice with a Lightning node, and replay the request with "
             "'Authorization: L402 <macaroon>:<preimage>'. Prices may be USD-pegged and "
@@ -566,10 +595,11 @@ async def get_agent_manifest(request: Request):
             "token_ttl_seconds. Free, delayed and truncated samples are listed under samples. "
             "Responses carry an X-AurAgrid-Signature header; verify it against the published "
             "signing pubkey."
-            % len(CATALOG)
+            % len(OFFERED)
         ),
         "api": {"type": "openapi", "url": base + "/openapi.json"},
-        "endpoints_count": len(CATALOG),
+        "terms_url": base + "/terms",
+        "endpoints_count": len(OFFERED),
         "endpoints": _catalog_entries(),
         "plans": _plan_entries(),
         "samples": _sample_entries(),
@@ -646,30 +676,72 @@ def _feed_handler(slug: str):
     return handler
 
 
-for _slug, _name, _tier, _desc in CATALOG:
-    app.add_api_route("/api/v1/" + _slug, _feed_handler(_slug), methods=["GET"], name=_slug,
-                      summary=_name, description=_desc + " Requires L402.", tags=[_tier],
-                      dependencies=[Depends(require_gateway)])
+for _slug, _name, _tier, _desc in OFFERED:
+    _free = feed_key(_slug) in ACCESS.free
+    app.add_api_route("/api/v1/" + _slug, _feed_handler(_slug), methods=["GET"], name=_slug, summary=_name,
+                      description=_desc + (" Free, rate-limited per IP." if _free else " Requires L402."),
+                      tags=["free" if _free else "paid"],
+                      dependencies=[] if _free else [Depends(require_gateway)])
+for _slug, _name, _, _ in PAID_CATALOG:
+    if not feeds.get(feed_key(_slug)):
+        log.error("Paid feed %s has no data provider: buyers would pay and get a 503. "
+                  "Remove it from pricing.yaml access.paid or connect it.", feed_key(_slug))
 
 
 # ---------------------------------------------------------------------------
 # Discovery for LLM agents
 # ---------------------------------------------------------------------------
+TERMS_TEXT = """AurAgrid terms of use
+
+Free tier
+- Endpoints marked "free" in /agent-manifest.json need no account or payment.
+- Limit: %(rpm)d requests per minute per client IP. Excess requests get HTTP 429.
+  Responses change at most every few minutes (most sources update hourly, weekly
+  or monthly), so cache them rather than polling.
+- The free tier is offered during launch. If its terms change, we will announce
+  it in /agent-manifest.json and /llms.txt at least 90 days in advance.
+
+Data sources and attribution
+- Every response names its source (e.g. U.S. Energy Information Administration,
+  NOAA, ERCOT, IMF PortWatch) and keep that attribution when you republish.
+- Underlying public data is available free of charge from those sources.
+  No source endorses AurAgrid.
+
+Paid endpoints
+- Paid endpoints use L402 (Lightning): pay the invoice in the 402 response and
+  replay the request with the token. A token works until its stated expiry.
+
+No warranty
+- Data is provided "as is", may be delayed, revised or unavailable, and is not
+  investment, trading or safety advice.
+"""
+
+
 @app.get("/llms.txt", response_class=PlainTextResponse, include_in_schema=False)
 def llms_txt(request: Request):
     base = PUBLIC_URL or str(request.base_url).rstrip("/")
-    lines = ["# AurAgrid L402 Oracle", "",
-             "> Paid ESG, energy, maritime and wholesale telemetry over L402 (Lightning).", "",
+    lines = ["# AurAgrid", "",
+             "> Energy and maritime data from public sources (U.S. EIA, NOAA, ERCOT, IMF PortWatch). "
+             "Free endpoints need no key; premium endpoints are paid per use over L402 (Lightning).", "",
              "- Manifest: %s/agent-manifest.json" % base,
              "- OpenAPI: %s/openapi.json" % base,
-             "- Checkout (browser, WebLN): %s/buy" % base, "", "## Free samples (delayed, truncated)"]
-    lines += ["- %s/api/v1/sample/%s" % (base, key) for key in SAMPLE_FEEDS]
-    lines += ["", "## Plans"]
-    lines += ["- %s: %s (token valid %d days)" % (p.display_name(), ", ".join(p.paths()), p.timeout // 86400)
-              for p in PLANS]
-    lines += ["", "## Hourly feeds"]
-    lines += ["- %s: /api/v1/%s" % (name, slug) for slug, name, _, _ in CATALOG]
+             "- Terms: %s/terms" % base]
+    for title, keys in (("Free endpoints (rate-limited per IP)", ACCESS.free), ("Paid endpoints (L402)", ACCESS.paid)):
+        rows = [(slug, name) for slug, name, _, _ in OFFERED if feed_key(slug) in keys]
+        if rows:
+            lines += ["", "## " + title]
+            lines += ["- %s: %s/api/v1/%s%s" % (name, base, slug, "" if feeds.get(feed_key(slug)) else " (coming soon)")
+                      for slug, name in rows]
+    if PLANS:
+        lines += ["", "## Passes", "- Checkout: %s/buy" % base]
+        lines += ["- %s: %s (token valid %d days)" % (p.display_name(), ", ".join(p.paths()), p.timeout // 86400)
+                  for p in PLANS]
     return "\n".join(lines) + "\n"
+
+
+@app.get("/terms", response_class=PlainTextResponse, include_in_schema=False)
+def terms():
+    return TERMS_TEXT % {"rpm": ACCESS.requests_per_minute}
 
 
 @app.get("/buy", response_class=HTMLResponse, include_in_schema=False)
