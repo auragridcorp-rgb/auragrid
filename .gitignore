@@ -30,3 +30,8 @@ portwatch_ranking.json
 portwatch_snapshot.json
 egress_state.json
 egress_guard.tripped
+
+# Feed snapshot store (store.py)
+feeds.db
+feeds.db-shm
+feeds.db-wal
