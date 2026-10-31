@@ -7,6 +7,9 @@ User=ubuntu
 Group=ubuntu
 WorkingDirectory=/home/ubuntu/AurAgrid
 ExecStart=/home/ubuntu/AurAgrid/scripts/run_aperture.sh
+# Bind :443 as the ubuntu user (HTTPS with the Let's Encrypt IP certificate)
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 Restart=always
 RestartSec=10
 StandardOutput=journal

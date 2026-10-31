@@ -1,0 +1,11 @@
+[Unit]
+Description=Renew the Let's Encrypt certificate for 84.12.79.124 (6-day IP cert, HTTP-01 on port 80)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Obtains on first run, renews when due (about half the lifetime, ~3 days), otherwise exits.
+ExecStart=/usr/local/bin/lego run --accept-tos --profile shortlived --domains 84.12.79.124 --http \
+  --path /etc/lego --log.format text \
+  --deploy-hook /usr/local/sbin/auragrid-install-tls-cert

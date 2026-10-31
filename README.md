@@ -14,8 +14,8 @@ that has no fresh enough data answers `503`.
 
 ## Endpoints
 
-Base URL: `http://84.12.79.124:8080`. The live list, with prices and status, is
-always at [`/agent-manifest.json`](http://84.12.79.124:8080/agent-manifest.json).
+Base URL: `https://84.12.79.124`. The live list, with prices and status, is
+always at [`/agent-manifest.json`](https://84.12.79.124/agent-manifest.json).
 
 | Endpoint | Access | Data |
 |---|---|---|
@@ -31,10 +31,10 @@ always at [`/agent-manifest.json`](http://84.12.79.124:8080/agent-manifest.json)
 | `/api/v1/batch/maritime-weather` | free | Latest NOAA NDBC buoy and coastal station observations |
 
 Free endpoints need no account and are limited to 30 requests per minute per IP.
-Terms: [`/terms`](http://84.12.79.124:8080/terms).
+Terms: [`/terms`](https://84.12.79.124/terms).
 
 ```bash
-curl -s --compressed http://84.12.79.124:8080/api/v1/energy/grid | jq .data.lower48
+curl -s --compressed https://84.12.79.124/api/v1/energy/grid | jq .data.lower48
 ```
 
 ## Verifying responses
@@ -58,22 +58,21 @@ cap, supports a session budget, and checks the invoice against the free price
 quote and the preimage against the payment hash.
 
 ```bash
-export AURAGRID_URL=https://<oracle-host>      # see the note on http below
+export AURAGRID_URL=https://84.12.79.124
 export LND_REST_URL=https://127.0.0.1:8084 LND_TLS_CERT=~/.lnd/tls.cert LND_MACAROON_PATH=~/agent.macaroon
 export AURAGRID_MAX_SATS=200
 python client.py /api/v1/batch/btc-fees
 ```
 
-The oracle has no TLS endpoint yet. The client refuses to send L402 tokens (bearer
-credentials) over plain http to a non-loopback host unless you pass
-`allow_insecure_http=True` in code.
+The oracle serves HTTPS only, with a Let's Encrypt certificate for the IP address
+(renewed automatically; no domain). The client refuses to send L402 tokens (bearer
+credentials) over plain http to anything but loopback.
 
 ## MCP server
 
 `auragrid_sdk/mcp_server.py` exposes one FastMCP tool per endpoint. The free tools
 work without any setup. The paid tools pay through `client.py` only when
-`AURAGRID_MAX_SATS` and the LND variables above are set (plus
-`AURAGRID_ALLOW_INSECURE_HTTP=1` while the oracle is http-only).
+`AURAGRID_MAX_SATS` and the LND variables above are set.
 
 ```bash
 fastmcp run auragrid_sdk/mcp_server.py
@@ -82,7 +81,7 @@ fastmcp run auragrid_sdk/mcp_server.py
 ## How it runs
 
 ```
-upstream sources ──> fetcher.py ──> var/feeds.db ──> FastAPI (127.0.0.1:8000) ──> Aperture L402 (:8080)
+upstream sources ──> fetcher.py ──> var/feeds.db ──> FastAPI (127.0.0.1:8000) ──> Aperture L402 (HTTPS :443)
 (EIA, NOAA, USGS,     (schedule,     (SQLite snapshot   (reads snapshots only)      (prices, free-tier
  bitcoind, LND)        retries)       store)                                          rate limits)
 ```
