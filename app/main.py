@@ -1,4 +1,4 @@
-"""AurAgrid backend: paid feeds, passes/bundles, free samples, operator dashboard.
+"""AurAgrid backend: free and paid data feeds, passes/bundles, operator dashboard.
 
 Run behind Aperture only, bound to loopback:
 
@@ -9,7 +9,9 @@ Routes
 /api/v1/<feed>                 paid hourly feeds (Aperture sells the token)
 /api/v1/<plan prefix>/<feed>   30-day passes and bundles, rewritten onto the
                                feed routes by pass_support.PlanRewriteMiddleware
-/api/v1/sample/<feed>          free, delayed, truncated samples (samples.py)
+/api/v1/sample/*, /api/v1/pro/*, retired feeds   410 Gone
+Feed data comes from the snapshot store (store.py) written by fetcher.py; the
+API never calls an upstream source during a request.
 /api/v1/price/<path>           free price quotes
 /buy                           browser checkout (WebLN, or paste the preimage)
 /agent-manifest.json, /.well-known/ai-plugin.json, /llms.txt, /openapi.json
@@ -78,23 +80,20 @@ from app.buy_page import BUY_HTML
 from app.lnd_client import lnd
 from attestation import AttestationMiddleware, lnd_rest_signer
 from l402_ledger import L402LedgerMiddleware, Ledger, hash_hex, token_payment_hash
-from pass_support import HOURLY, PlanRewriteMiddleware, PlanRouter, load_access, load_plans
+from pass_support import HOURLY, PlanRewriteMiddleware, PlanRouter, feed_path, load_access, load_plans
 from pricer import PriceEngine, normalize_path
-from samples import SAMPLE_FEEDS, SampleStore, resolve as resolve_sample
-from sample_examples import example_body
-import eia_grid_feed
-import eia_lng_feed
-import eia_spr_feed
-import ercot_feed
-import ndbc_feed
-import portwatch_feed
+import jobs
+from store import Store
+# Provider modules are imported for their provenance (feeds.describe); the API never
+# calls them: fetcher.py fetches, the API reads stored snapshots (jobs.StoreFeed).
+import btc_feed  # noqa: F401
+import eia_grid_feed  # noqa: F401
+import eia_lng_feed  # noqa: F401
+import eia_spr_feed  # noqa: F401
+import ln_feed  # noqa: F401
+import ndbc_feed  # noqa: F401
+import usgs_feed  # noqa: F401
 
-ercot_feed.register_from_env()       # ercot-lmp, when ERCOT credentials are configured
-portwatch_feed.register_from_env()   # port-congestion-index, when AURAGRID_PORTWATCH_ENABLED=1
-eia_lng_feed.register_from_env()     # lng-supply-chain, when EIA_API_KEY is configured
-eia_grid_feed.register_from_env()    # energy/grid, same key
-eia_spr_feed.register_from_env()     # spr-stockpile, same key
-ndbc_feed.register_from_env()        # maritime-weather (NOAA buoys; no key needed)
 
 log = logging.getLogger("auragrid")
 
@@ -112,9 +111,7 @@ if PUBLIC_URL and not PUBLIC_URL.startswith("https://"):
 @asynccontextmanager
 async def lifespan(_app):
     engine.start()   # background BTC/USD refresh; `engine` is defined below
-    sample_store.start()
     yield
-    sample_store.stop()
     engine.stop()
 
 
@@ -127,56 +124,33 @@ security = HTTPBasic()
 # ---------------------------------------------------------------------------
 CATALOG = [
     # slug (path after /api/v1/), display name, tier, description
-    ("esg/carbon", "ESG Carbon", "retail",
-     "Satellite-verified ESG carbon offset telemetry."),
-    ("energy/grid", "U.S. Grid Demand and Generation Mix", "retail",
+    ("batch/btc-fees", "Bitcoin Fee and Mempool Monitor", "bitcoin",
+     "Fee estimates for 1-144 block targets, mempool size and minimum fee, and the last block's fee "
+     "percentiles, refreshed every minute from AurAgrid's own Bitcoin Core node."),
+    ("batch/btc-fees-delayed", "Bitcoin Fee and Mempool Monitor (10 min delayed)", "bitcoin",
+     "The same data as btc-fees, at least 10 minutes old."),
+    ("batch/ln-network", "Lightning Network Monitor", "bitcoin",
+     "Lightning nodes, channels, capacity, channel-size and routing-fee percentiles, disabled share and "
+     "policy churn, refreshed hourly from AurAgrid's own LND node's gossip graph."),
+    ("batch/ln-network-daily", "Lightning Network Monitor (daily)", "bitcoin",
+     "The same data as ln-network, as of the end of the previous UTC day."),
+    ("batch/earthquakes", "Global Earthquake Activity", "hazards",
+     "M2.5+ earthquakes in the last 24 h and M4.5+ in the last 7 days: counts by magnitude, largest "
+     "events, tsunami-flagged and PAGER-alert events (USGS real-time feeds)."),
+    ("energy/grid", "U.S. Grid Demand and Generation Mix", "energy",
      "Hourly demand, forecast, interchange and generation by fuel with renewable/carbon-free shares "
      "for the Lower 48, EIA regions and every balancing authority (U.S. EIA-930)."),
-    ("sar/commodities", "SAR Commodities", "retail",
-     "Synthetic aperture radar (SAR) commodity volume estimates."),
-    ("maritime/congestion", "Maritime Congestion", "retail",
-     "Global shipping chokepoint vessel queues and delays."),
-    ("weather/micro-climate", "Weather Micro Climate", "retail",
-     "High-frequency pressure and wind vector telemetry."),
-    ("logistics/cross-border", "Logistics Cross Border", "retail",
-     "Manufacturing yard density and freight velocity."),
-    ("batch/hyperscaler-power", "Batch Hyperscaler Power Forecast", "wholesale",
-     "Power load predictions for AI data centers."),
-    ("batch/lng-supply-chain", "U.S. LNG Export Monitor", "wholesale",
-     "Monthly U.S. LNG exports by terminal and destination country, export prices, and month/year "
-     "changes (U.S. EIA; about three months' publication lag)."),
-    ("batch/crop-moisture", "Batch Crop Moisture Matrix", "wholesale",
-     "Soil moisture and precipitation matrices across agricultural belts."),
-    ("batch/sts-anomalies", "Batch STS Transfer Anomalies", "wholesale",
-     "Open-ocean ship-to-ship (STS) cargo transfer tracking."),
-    ("batch/maritime-weather", "Marine Weather Observations", "wholesale",
-     "Latest wind, gust, wave height/period/direction, pressure and air/sea temperature from "
-     "~850 NOAA NDBC buoys and coastal stations worldwide (updated continuously)."),
-    ("batch/curtailment-risk", "Batch Renewable Curtailment Risk", "wholesale",
-     "Renewable energy curtailment predictions for wind/solar."),
-    ("batch/dark-fleet-matrix", "Global Dark Fleet Gap Matrix", "wholesale",
-     "Dark fleet AIS anomaly and vessel spoofing matrix."),
-    ("batch/ercot-lmp", "ERCOT 4,000-Node LMP Aggregation", "wholesale",
-     "ERCOT 4000-node locational marginal pricing grid."),
-    ("batch/port-congestion-index", "Top 100 Global Port Activity Index", "wholesale",
-     "Port calls and import/export tonnage for the 100 busiest ports vs. their 90-day baseline, "
-     "plus chokepoint transits (IMF PortWatch, satellite AIS; updated weekly)."),
-    ("batch/carbon-credit-audit", "Multi-Project Carbon Credit Audit Matrix", "wholesale",
-     "Satellite carbon credit verification matrix."),
-    ("batch/spr-stockpile", "U.S. Strategic Petroleum Reserve Monitor", "wholesale",
+    ("batch/spr-stockpile", "U.S. Strategic Petroleum Reserve Monitor", "energy",
      "Weekly SPR and commercial crude stocks with 1/4/52-week changes, 52-week range and history "
      "(U.S. EIA Weekly Petroleum Status Report)."),
-    ("batch/critical-minerals", "Batch Critical Minerals Tracker", "wholesale",
-     "Critical minerals and rare-earth supply chain tracker."),
-    ("batch/naval-escalation", "Batch Naval Escalation Risk", "wholesale",
-     "Geopolitical naval escalation risk matrix."),
-    ("batch/wildfire-carbon-offset", "Batch Wildfire Carbon Offset Risk", "wholesale",
-     "Wildfire risk matrix for carbon offset forests."),
-    ("batch/green-compute", "Batch Green Compute Routing", "wholesale",
-     "Zero-carbon data center compute routing matrix."),
-    ("batch/agri-yield", "Batch Agri-Commodities Yield Predictor", "wholesale",
-     "Global agricultural crop yield predictor."),
+    ("batch/lng-supply-chain", "U.S. LNG Export Monitor", "energy",
+     "Monthly U.S. LNG exports by terminal and destination country, export prices, and month/year "
+     "changes (U.S. EIA; about three months' publication lag)."),
+    ("batch/maritime-weather", "Marine Weather Observations", "maritime",
+     "Latest wind, gust, wave height/period/direction, pressure and air/sea temperature from "
+     "~850 NOAA NDBC buoys and coastal stations worldwide (updated continuously)."),
 ]
+
 
 BATCH_PREFIX = os.environ.get("AURAGRID_BATCH_PREFIX", "batch")
 if BATCH_PREFIX != "batch":
@@ -188,6 +162,9 @@ PRICING_CONFIG = os.environ.get("AURAGRID_PRICING_CONFIG", "pricing.yaml")
 PLANS = load_plans(PRICING_CONFIG)
 PLAN_ROUTER = PlanRouter(PLANS, feed_route_prefix=BATCH_PREFIX)
 ACCESS = load_access(PRICING_CONFIG)
+# Endpoints from the previous catalog: 410 Gone (no reliable free source, or terms that
+# don't allow redistribution; see RESEARCH.md). Listed in pricing.yaml access.retired.
+RETIRED = {feed_path(k, BATCH_PREFIX)[len("/api/v1/"):] for k in ACCESS.retired} | {"telemetry"}
 
 
 def feed_key(slug: str) -> str:
@@ -197,6 +174,22 @@ def feed_key(slug: str) -> str:
 # Only feeds listed in pricing.yaml `access:` are offered; the rest have no data source yet.
 OFFERED = [entry for entry in CATALOG if feed_key(entry[0]) in ACCESS.offered]
 PAID_CATALOG = [entry for entry in OFFERED if feed_key(entry[0]) in ACCESS.paid]
+
+# Every offered feed is served from the snapshot store written by fetcher.py.
+STORE = Store()
+jobs.register_store_feeds(STORE, {feed_key(slug) for slug, _, _, _ in OFFERED})
+
+
+def feed_live(key: str) -> bool:
+    """Live = a stored snapshot exists and is recent enough to be served."""
+    provider = feeds.get(key)
+    if provider is None:
+        return False
+    try:
+        provider()
+        return True
+    except Exception:
+        return False
 _unknown = ACCESS.offered - {feed_key(slug) for slug, _, _, _ in CATALOG}
 if _unknown:
     log.error("pricing.yaml access lists feeds that are not in the catalog: %s", ", ".join(sorted(_unknown)))
@@ -252,14 +245,13 @@ def build_pricing(services: list):
 
     paths = ["/api/v1/" + slug for slug, _, _, _ in OFFERED]
     paths += [p for plan in PLANS for p in plan.paths()]
-    paths += ["/api/v1/sample/" + key for key in SAMPLE_FEEDS] + ["/buy"]
+    paths += ["/buy"] + ["/api/v1/" + slug for slug in RETIRED]
     dead = [svc.get("name") for svc, rx in rules if not any(rx.match(p) for p in paths)]
     return pricing, unmatched, dead
 
 
 engine = PriceEngine(APERTURE_CONFIG, PRICING_CONFIG)
 ledger = Ledger(os.environ.get("AURAGRID_LEDGER_DB", "ledger.db"))
-sample_store = SampleStore()
 
 # Middleware order matters (last added = outermost):
 #   attestation -> ledger -> plan rewrite -> routes
@@ -531,7 +523,7 @@ def _catalog_entries() -> list[dict]:
         free = feed_key(slug) in ACCESS.free
         entry = {"path": "/api/v1/" + slug, "name": name, "tier": tier, "description": desc,
                  "access": "free" if free else "paid", "auth": "none" if free else "L402",
-                 "status": "live" if feeds.get(feed_key(slug)) else "coming_soon"}
+                 "status": "live" if feed_live(feed_key(slug)) else "coming_soon"}
         if free:
             entry["rate_limit"] = "%d requests/minute per IP" % ACCESS.requests_per_minute
             entries.append(entry)
@@ -568,12 +560,6 @@ def _plan_entries() -> list[dict]:
     return entries
 
 
-def _sample_entries() -> list[dict]:
-    return [{"feed": key, "path": "/api/v1/sample/" + key, "auth": "none",
-             "delay_seconds": sample_store.delay, "max_items_per_list": sample_store.max_items}
-            for key in SAMPLE_FEEDS]
-
-
 @app.get("/.well-known/ai-plugin.json")
 @app.get("/agent-manifest.json")
 async def get_agent_manifest(request: Request):
@@ -586,8 +572,8 @@ async def get_agent_manifest(request: Request):
         "name_for_human": "AurAgrid L402 Oracle",
         "name_for_model": "auragrid_oracle",
         "description_for_model": (
-            "AurAgrid serves %d energy and maritime data endpoints built from public sources "
-            "(U.S. EIA, NOAA, ERCOT, IMF PortWatch); each response names its source. Endpoints "
+            "AurAgrid serves %d data endpoints computed from its own Bitcoin and Lightning nodes or "
+            "from U.S. public-domain sources (EIA, NOAA, USGS); each response carries provenance. Endpoints "
             "with access 'free' need no payment and are rate-limited per IP (see terms_url); only "
             "use endpoints whose status is 'live'. Endpoints with access 'paid' use L402 Lightning "
             "payments. On a 402 "
@@ -598,7 +584,7 @@ async def get_agent_manifest(request: Request):
             "accept an invoice within the quote's tolerance_pct. A paid token stays valid for the "
             "endpoint's token_ttl_seconds, so reuse it instead of paying again. For repeated use, "
             "a plan (30-day pass or multi-feed bundle) sells one token that opens its paths for "
-            "token_ttl_seconds. Free, delayed and truncated samples are listed under samples. "
+            "token_ttl_seconds. Paid feeds have free delayed copies (btc-fees-delayed, ln-network-daily). "
             "Responses carry an X-AurAgrid-Signature header; verify it against the published "
             "signing pubkey."
             % len(OFFERED)
@@ -608,7 +594,6 @@ async def get_agent_manifest(request: Request):
         "endpoints_count": len(OFFERED),
         "endpoints": _catalog_entries(),
         "plans": _plan_entries(),
-        "samples": _sample_entries(),
         "checkout_url": base + "/buy",
         "payment_protocol": "L402",
         "signature": signature,
@@ -627,31 +612,20 @@ def get_endpoint_quote(slug: str):
 
 
 # ---------------------------------------------------------------------------
-# Free samples (no paywall, no attestation, not in the ledger)
+# Retired endpoints: 410 Gone, with a pointer to what replaced them
 # ---------------------------------------------------------------------------
-@app.get("/api/v1/sample/{slug}")
-def get_sample(slug: str):
-    """Delayed, truncated sample of a hero feed. 503 while the first snapshot ages."""
-    key = resolve_sample(slug)
-    if key is None:
-        raise HTTPException(status_code=404, detail="No sample for this feed")
-    body = sample_store.get(key)
-    if body is None and not feeds.get(key) and example_body(key):
-        # Not connected yet: show the response structure, clearly labeled as synthetic.
-        return JSONResponse(example_body(key), headers={"Cache-Control": "public, max-age=300"})
-    if body is None:
-        detail = "Sample warming up" if feeds.get(key) else "Feed not connected"
-        return JSONResponse({"detail": detail, "feed": key,
-                             "delay_seconds": sample_store.delay},
-                            status_code=503, headers={"Retry-After": str(sample_store.interval)})
-    full = "/api/v1/%s/%s" % (BATCH_PREFIX, key)
-    body["full_feed"] = {
-        "path": full,
-        "quote_url": "/api/v1/price/%s/%s" % (BATCH_PREFIX, key),
-        "plans": [plan.name for plan in PLANS if key in plan.feeds],
-        "checkout_url": "/buy",
-    }
-    return JSONResponse(body, headers={"Cache-Control": "public, max-age=60"})
+def _gone(path: str):
+    return JSONResponse(
+        {"detail": "This endpoint has been retired.", "path": path,
+         "reason": "No reliable free data source, or the source's terms do not allow redistribution.",
+         "current_endpoints": "/agent-manifest.json"},
+        status_code=410, headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/api/v1/sample/{slug:path}", include_in_schema=False)
+@app.get("/api/v1/pro/{slug:path}", include_in_schema=False)
+def retired_prefixes(request: Request, slug: str):
+    return _gone(request.url.path)
 
 
 # ---------------------------------------------------------------------------
@@ -692,6 +666,12 @@ for _slug, _name, _tier, _desc in OFFERED:
                       description=_desc + (" Free, rate-limited per IP." if _free else " Requires L402."),
                       tags=["free" if _free else "paid"],
                       dependencies=[] if _free else [Depends(require_gateway)])
+def _retired_route(request: Request):
+    return _gone(request.url.path)
+
+
+for _slug in sorted(RETIRED):
+    app.add_api_route("/api/v1/" + _slug, _retired_route, methods=["GET"], include_in_schema=False)
 for _slug, _name, _, _ in PAID_CATALOG:
     if not feeds.get(feed_key(_slug)):
         log.error("Paid feed %s has no data provider: buyers would pay and get a 503. "
@@ -731,7 +711,8 @@ No warranty
 def llms_txt(request: Request):
     base = PUBLIC_URL or str(request.base_url).rstrip("/")
     lines = ["# AurAgrid", "",
-             "> Energy and maritime data from public sources (U.S. EIA, NOAA, ERCOT, IMF PortWatch). "
+             "> Bitcoin, Lightning, energy, hazard and marine data: computed from AurAgrid's own Bitcoin "
+             "and Lightning nodes, or from U.S. public-domain sources (EIA, NOAA, USGS). "
              "Free endpoints need no key; premium endpoints are paid per use over L402 (Lightning).", "",
              "- Manifest: %s/agent-manifest.json" % base,
              "- OpenAPI: %s/openapi.json" % base,
@@ -740,7 +721,7 @@ def llms_txt(request: Request):
         rows = [(slug, name) for slug, name, _, _ in OFFERED if feed_key(slug) in keys]
         if rows:
             lines += ["", "## " + title]
-            lines += ["- %s: %s/api/v1/%s%s" % (name, base, slug, "" if feeds.get(feed_key(slug)) else " (coming soon)")
+            lines += ["- %s: %s/api/v1/%s%s" % (name, base, slug, "" if feed_live(feed_key(slug)) else " (coming soon)")
                       for slug, name in rows]
     if PLANS:
         lines += ["", "## Passes", "- Checkout: %s/buy" % base]

@@ -127,6 +127,8 @@ class Access:
     are not offered at all (no route, not in the manifest, not sold by Aperture)."""
     free: tuple = ()          # served without payment, rate-limited per client IP
     paid: tuple = ()          # hourly L402 tokens
+    retired: tuple = ()       # answered with 410 Gone
+    retired_prefixes: tuple = ()   # e.g. "sample" -> everything under /api/v1/sample/ is 410
     requests_per_minute: int = 30
     burst: int = 10
 
@@ -149,12 +151,15 @@ def load_access(pricing_config: str = "pricing.yaml") -> Access:
         raw = {}
     free = raw.get("free") or {}
     paid = raw.get("paid") or {}
+    retired = raw.get("retired") or {}
     access = Access(free=tuple(free.get("feeds") or ()), paid=tuple(paid.get("feeds") or ()),
+                    retired=tuple(retired.get("feeds") or ()), retired_prefixes=tuple(retired.get("prefixes") or ()),
                     requests_per_minute=int(free.get("requests_per_minute", 30)),
                     burst=int(free.get("burst", 10)))
-    both = set(access.free) & set(access.paid)
-    if both:
-        raise ValueError("feeds listed as both free and paid in %s: %s" % (pricing_config, sorted(both)))
+    for a, b in ((access.free, access.paid), (access.free, access.retired), (access.paid, access.retired)):
+        both = set(a) & set(b)
+        if both:
+            raise ValueError("feeds listed twice in %s access: %s" % (pricing_config, sorted(both)))
     return access
 
 

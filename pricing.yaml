@@ -1,43 +1,35 @@
-# USD targets for the pricer (pricer.py). Keys are feed paths without the
-# /api/v1/batch|wholesale prefix. Anything not listed keeps its static
-# aperture.yaml price.
-endpoints:
-  ercot-lmp: 15.00
-  dark-fleet-matrix: 20.00
-  naval-escalation: 25.00
-  lng-supply-chain: 10.00
+# USD targets for the pricer (pricer.py), keyed by feed. Nothing is USD-pegged
+# right now: paid prices are static sats in aperture.base.yaml.
+endpoints: {}
 
 # 30-day passes and bundles (pass_support.py). After editing, regenerate
 # Aperture's config with `python gen_aperture.py` and restart Aperture.
 #   - single-feed plans with `usd` are USD-pegged through the pricer
-#   - multi-feed bundles get a static sat price: gen_aperture.py converts
-#     `usd` at the BTC price when it runs (or set `sats` to pin it)
+#   - multi-feed bundles need a static price: `sats` (or `usd`, converted at generation)
 plans:
-  ercot-pro-pass:
-    enabled: false   # turn on once ERCOT credentials are in feeds.env (ercot-lmp must be paid)
-    title: ERCOT LMP Pro Pass (30 days)
-    kind: pass_30d
-    prefix: pro
-    feeds: [ercot-lmp]
-    usd: 49.00
-    timeout: 2592000
-  hero-bundle:
-    enabled: false   # its other feeds are free now; revisit when premium versions exist
-    title: Hero Bundle - ERCOT LMP + LNG Supply Chain + Port Activity (30 days)
+  lightning-operator:
+    title: Lightning Operator Bundle - Bitcoin fees + Lightning network (30 days)
     kind: bundle
     prefix: bundle
-    feeds: [ercot-lmp, lng-supply-chain, port-congestion-index]
-    usd: 99.00
+    feeds: [btc-fees, ln-network]
+    sats: 5000
     timeout: 2592000
 
 # Which feeds are offered. Only list a feed once its data source is connected
 # (or it shows as "coming soon"); never list one as paid without a source, or
-# buyers pay for a 503. Feeds in neither list are not offered at all.
-# After editing: python gen_aperture.py (and the --out ~/.aperture/... run), restart.
+# buyers pay for a 503. After editing: python gen_aperture.py (and the --out
+# ~/.aperture/... run), restart.
 access:
   free:                       # no payment; rate-limited per client IP by Aperture
-    feeds: [maritime-weather, energy/grid, spr-stockpile, lng-supply-chain, port-congestion-index]
+    feeds: [maritime-weather, earthquakes, btc-fees-delayed, ln-network-daily,
+            energy/grid, spr-stockpile, lng-supply-chain]
     requests_per_minute: 30
     burst: 10
-  paid:                       # hourly L402 tokens
-    feeds: []                 # add ercot-lmp once ERCOT credentials are configured
+  paid:                       # hourly L402 tokens; static prices in aperture.base.yaml
+    feeds: [btc-fees, ln-network]
+  retired:                    # answered with 410 Gone (routed through Aperture so callers see it)
+    feeds: [esg/carbon, sar/commodities, maritime/congestion, weather/micro-climate, logistics/cross-border,
+            hyperscaler-power, crop-moisture, sts-anomalies, curtailment-risk, dark-fleet-matrix, ercot-lmp,
+            port-congestion-index, carbon-credit-audit, critical-minerals, naval-escalation,
+            wildfire-carbon-offset, green-compute, agri-yield]
+    prefixes: [sample, pro]
