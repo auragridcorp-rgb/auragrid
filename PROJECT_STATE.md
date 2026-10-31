@@ -39,6 +39,15 @@ resize if so (`RESEARCH.md` §0).
 | `lnd` | Mainnet LND; REST 127.0.0.1:8081; source for `ln-network`, issues L402 invoices | local |
 | DVM | `dvm/nip90_worker.py` in tmux session `auragrid_dvm` (Nostr NIP-90) | - |
 
+## Response signing
+
+On since 2026-10-31. Every successful `/api/v1/` data response carries
+`X-AurAgrid-Signature-V2` + `X-AurAgrid-Timestamp`, signed by the production LND
+key `038041ef6643bb59d9ec73568a952183b261683968cb4000b547302fa464cf8228` through
+`attest.macaroon` (`message:write` only, chmod 600, gitignored; set in
+`scripts/run_backend.sh`). Scheme: `attestation.py` (v2; the old path-only v1 is
+forgeable and no longer produced). The manifest's `signature.enabled` follows it.
+
 ## Endpoints (live list: `GET /agent-manifest.json`)
 
 | Path | Access | Source | Refresh |
@@ -65,15 +74,14 @@ paid prices in `aperture.base.yaml`. After editing, regenerate Aperture
 - `client.py`: hardened L402 client (mandatory per-payment cap, session budget,
   quote check, preimage check, no redirects, signature verification hook).
 - `auragrid_sdk/mcp_server.py`: FastMCP server, one tool per endpoint; paid
-  tools pay through `client.py` only when `AURAGRID_MAX_SATS` and an LND wallet are set.
-- Not yet updated for the pivot: `auragrid_mcp/auragrid_mcp/client.py` (pays
-  invoices with no cap) and `langchain_auragrid/` (examples use retired feeds).
+  tools pay through `client.py` only when `AURAGRID_MAX_SATS` and an LND wallet are set;
+  verifies signatures when `AURAGRID_SIGNING_PUBKEY` is pinned.
+- `auragrid_mcp/` (PyPI `auragrid-mcp`): ships a copy of `client.py`
+  (`tests/test_client_copies.py` keeps them identical). PyPI has only 0.1.0, which
+  contains no code (metadata only); 0.2.0 is built from this repo but not uploaded.
 
 ## Known gaps
 
-- **Response signing is off.** `AttestationMiddleware` only runs when
-  `AURAGRID_ATTEST_MACAROON` is set, and `scripts/run_backend.sh` doesn't set it,
-  so responses carry no `X-AurAgrid-Signature*` headers today.
 - Plain HTTP only (no TLS domain yet). L402 tokens are bearer credentials.
 - Revenue: 0 settled L402 invoices as of 2026-10-30 (`RESEARCH.md` §1).
 

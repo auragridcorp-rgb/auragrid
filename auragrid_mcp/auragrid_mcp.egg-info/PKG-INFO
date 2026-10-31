@@ -1,7 +1,0 @@
-Metadata-Version: 2.4
-Name: auragrid-mcp
-Version: 0.1.0
-Summary: L402 Agent SDK for AurAgrid Telemetry
-Requires-Dist: requests
-Dynamic: requires-dist
-Dynamic: summary
