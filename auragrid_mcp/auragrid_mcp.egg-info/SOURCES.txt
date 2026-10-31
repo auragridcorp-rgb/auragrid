@@ -1,6 +1,0 @@
-setup.py
-auragrid_mcp.egg-info/PKG-INFO
-auragrid_mcp.egg-info/SOURCES.txt
-auragrid_mcp.egg-info/dependency_links.txt
-auragrid_mcp.egg-info/requires.txt
-auragrid_mcp.egg-info/top_level.txt

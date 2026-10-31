@@ -37,6 +37,16 @@ Terms: [`/terms`](http://84.12.79.124:8080/terms).
 curl -s --compressed http://84.12.79.124:8080/api/v1/energy/grid | jq .data.lower48
 ```
 
+## Verifying responses
+
+Successful data responses are signed by the oracle's Lightning node key
+(`038041ef6643bb59d9ec73568a952183b261683968cb4000b547302fa464cf8228`):
+`X-AurAgrid-Signature-V2` covers the method, path, a SHA-256 of the body, the
+`X-AurAgrid-Timestamp` and your optional `X-AurAgrid-Nonce`. The scheme and a
+verifier are in `attestation.py`; `client.py` and the MCP server use it when you
+pin the key (`verify_signature=attestation.make_verifier(PUBKEY)` /
+`AURAGRID_SIGNING_PUBKEY`). Pin the key from a trusted source, not from a response.
+
 ## Paying (L402)
 
 A paid endpoint answers `402` with `WWW-Authenticate: L402 macaroon="…", invoice="…"`.

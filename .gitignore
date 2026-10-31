@@ -36,3 +36,9 @@ feeds.db
 feeds.db-shm
 feeds.db-wal
 var/
+
+# Python packaging output and runtime logs
+build/
+dist/
+*.egg-info/
+logs/

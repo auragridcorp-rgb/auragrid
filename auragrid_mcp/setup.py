@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="auragrid-mcp",
-    version="0.1.0",
+    version="0.2.0",
     description="L402 client for the AurAgrid data oracle",
     long_description=("Python client for AurAgrid: Bitcoin fee and Lightning network data from AurAgrid's own "
                       "nodes (paid via L402) and free U.S. public-domain feeds (EIA grid mix, SPR, LNG exports; "

@@ -40,6 +40,13 @@ class FreeTierRouteTests(unittest.TestCase):
         # retired feeds answer 410 (tests/test_plans_samples.py) and are not advertised
         self.assertNotIn("/api/v1/batch/naval-escalation", self.client.get("/openapi.json").json()["paths"])
 
+    def test_manifest_claims_signatures_only_when_signing(self):
+        m = self.client.get("/agent-manifest.json").json()   # tests run without AURAGRID_ATTEST_MACAROON
+        self.assertFalse(m["signature"]["enabled"])
+        self.assertEqual(m["signature"]["header"], "X-AurAgrid-Signature-V2")
+        self.assertNotIn("Signature-V2", m["description_for_model"])
+        self.assertIn("serves %d data endpoints" % m["endpoints_count"], m["description_for_model"])
+
     def test_manifest_shows_access_and_status(self):
         endpoints = {e["path"]: e for e in self.client.get("/agent-manifest.json").json()["endpoints"]}
         self.assertNotIn("/api/v1/batch/naval-escalation", endpoints)

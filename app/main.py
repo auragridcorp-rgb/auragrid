@@ -78,6 +78,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import feeds
 from app.buy_page import BUY_HTML
 from app.lnd_client import lnd
+import attestation
 from attestation import AttestationMiddleware, lnd_rest_signer
 from l402_ledger import L402LedgerMiddleware, Ledger, hash_hex, token_payment_hash
 from pass_support import HOURLY, PlanRewriteMiddleware, PlanRouter, feed_path, load_access, load_plans
@@ -265,6 +266,7 @@ if not GATEWAY_SECRET:
 
 # v2 response attestation (added last = outermost, so it signs the final bytes of /api/v1/* 200s).
 _attest_macaroon = os.environ.get("AURAGRID_ATTEST_MACAROON")  # path to a message:write-only macaroon
+SIGNING_ENABLED = bool(_attest_macaroon)
 if _attest_macaroon:
     with open(_attest_macaroon, "rb") as _fh:
         _attest_macaroon_hex = _fh.read().hex()
@@ -564,7 +566,17 @@ def _plan_entries() -> list[dict]:
 @app.get("/agent-manifest.json")
 async def get_agent_manifest(request: Request):
     base = PUBLIC_URL or str(request.base_url).rstrip("/")
-    signature = {"header": "X-AurAgrid-Signature"}
+    signature = {
+        "scheme": "auragrid_attest_v2",
+        "header": attestation.SIG_HEADER_V2,
+        "timestamp_header": attestation.TIMESTAMP_HEADER,
+        "nonce_request_header": attestation.NONCE_HEADER,
+        "message_lines": ["auragrid_attest_v2", "<METHOD>", "<path?query as sent>", "<sha256 hex of body>",
+                          "<unix timestamp>", "<nonce or ->"],
+        "message_join": "newline",
+        "format": "LND signmessage (zbase32 recoverable ECDSA); recover the key and compare it to pubkey",
+        "enabled": SIGNING_ENABLED,
+    }
     if SIGNING_PUBKEY:
         signature["pubkey"] = SIGNING_PUBKEY
     return {
@@ -584,10 +596,12 @@ async def get_agent_manifest(request: Request):
             "accept an invoice within the quote's tolerance_pct. A paid token stays valid for the "
             "endpoint's token_ttl_seconds, so reuse it instead of paying again. For repeated use, "
             "a plan (30-day pass or multi-feed bundle) sells one token that opens its paths for "
-            "token_ttl_seconds. Paid feeds have free delayed copies (btc-fees-delayed, ln-network-daily). "
-            "Responses carry an X-AurAgrid-Signature header; verify it against the published "
-            "signing pubkey."
+            "token_ttl_seconds. Paid feeds have free delayed copies (btc-fees-delayed, ln-network-daily)."
             % len(OFFERED)
+            + (" Successful /api/v1/ data responses carry X-AurAgrid-Signature-V2 and X-AurAgrid-Timestamp "
+               "headers (send a random X-AurAgrid-Nonce to bind the signature to your request); verify them "
+               "as described in `signature` against the published pubkey, pinned out-of-band."
+               if SIGNING_ENABLED else "")
         ),
         "api": {"type": "openapi", "url": base + "/openapi.json"},
         "terms_url": base + "/terms",
