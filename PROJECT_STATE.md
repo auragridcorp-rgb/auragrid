@@ -131,8 +131,6 @@ browser. `logs/`, `var/`, `build/`, `dist/` and `*.egg-info/` are gitignored.
 ## Known gaps
 
 - Revenue: 0 settled L402 invoices as of 2026-10-30 (`RESEARCH.md` §1).
-- `verify_deployment.py` has only been run from the server itself; run it from an
-  outside machine to confirm what the internet sees.
 
 ## Tests
 
@@ -141,4 +139,9 @@ browser. `logs/`, `var/`, `build/`, `dist/` and `*.egg-info/` are gitignored.
 62 offline tests (no LND, Aperture or network needed). Live checks:
 `python eia_grid_feed.py --check`, `python fetcher.py --once`,
 `python verify_deployment.py --base https://84.12.79.124 --ip 84.12.79.124`
-(35 PASS, 0 WARN, 0 FAIL on 2026-10-31).
+(35 PASS, 0 WARN, 0 FAIL on 2026-10-31, run on the server).
+
+External check on 2026-10-31 (check-host.net, 3-10 nodes per test): only 22, 443
+and 9735 accept connections; 80 refuses outside renewals; 8000, 8080, 8081,
+8084, 10009 and 10010 are closed. Over HTTPS, paid routes answer 402, free 200,
+retired 410, the operator dashboard 404, the manifest 200.
