@@ -4,8 +4,11 @@ Data: EIA Hourly Electric Grid Monitor (Form EIA-930) via API v2
 `electricity/rto/region-data` (demand, day-ahead demand forecast, net
 generation, interchange) and `electricity/rto/fuel-type-data` (net generation
 by fuel), for the Lower 48 total, EIA's 13 regions and every balancing
-authority. Hourly, typically 1-2 hours behind real time; each region is
-reported at its own latest hour.
+authority. Hourly. Demand is usually 1-2 hours behind real time, but the
+generation-by-fuel series can lag much longer (about 12 hours on 2026-10-31),
+so the query window is anchored on the newest hour EIA has published for fuel
+mix, not on the wall clock. Each region is reported at its own latest complete
+hour.
 
 Shares are computed from reported generation only (no emission factors):
 renewable = hydro + solar + wind (+ geothermal where reported); carbon-free =
@@ -26,7 +29,7 @@ import feeds
 
 log = logging.getLogger("auragrid.eia_grid")
 
-HOURS_BACK = 8
+HOURS_BACK = 8   # hours before EIA's newest fuel-mix hour (slower BAs report a few hours later)
 RENEWABLE = {"WAT", "SUN", "WND", "GEO"}
 NUCLEAR = {"NUC"}
 FOSSIL = {"COL", "NG", "OIL"}
@@ -98,7 +101,7 @@ def build_snapshot(region_rows: list, fuel_rows: list) -> dict:
     return {
         "dataset": "AurAgrid U.S. Grid Demand and Generation Mix",
         "frequency": "hourly",
-        "notes": "EIA-930 hourly data, usually 1-2 hours behind real time; each region at its latest "
+        "notes": "EIA-930 hourly data; the generation mix can lag real time by 12 hours or more. Each region at its latest "
                  "reported hour (UTC, hour ending). Shares are of positive net generation excluding storage.",
         "lower48": lower48,
         "cleanest_balancing_authorities": [
@@ -115,9 +118,10 @@ def build_snapshot(region_rows: list, fuel_rows: list) -> dict:
     }
 
 
-def fetch(session, api_key: str, now=None) -> dict:
-    now = now or datetime.now(timezone.utc)
-    start = (now - timedelta(hours=HOURS_BACK)).strftime("%Y-%m-%dT%H")
+def fetch(session, api_key: str) -> dict:
+    newest = datetime.strptime(eia_api.latest_period(session, "electricity/rto/fuel-type-data", api_key,
+                                                     {"frequency": "hourly"}), "%Y-%m-%dT%H")
+    start = (newest - timedelta(hours=HOURS_BACK)).strftime("%Y-%m-%dT%H")
     common = {"frequency": "hourly", "start": start,
               "sort[0][column]": "period", "sort[0][direction]": "desc"}
     region_rows = eia_api.get_rows(session, "electricity/rto/region-data", api_key,

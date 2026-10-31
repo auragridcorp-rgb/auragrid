@@ -32,10 +32,12 @@ class FreeTierRouteTests(unittest.TestCase):
         self.assertEqual(len(r.json()["data"]["rows"]), 2000)   # free = full data, not a sample
 
     def test_paid_feed_still_needs_gateway(self):
-        self.assertEqual(self.client.get("/api/v1/batch/ercot-lmp").status_code, 403)
+        self.assertEqual(self.client.get("/api/v1/batch/btc-fees").status_code, 403)
 
     def test_feeds_not_offered_have_no_route(self):
-        self.assertEqual(self.client.get("/api/v1/batch/naval-escalation", headers=t.GW).status_code, 404)
+        self.assertEqual(self.client.get("/api/v1/batch/no-such-feed", headers=t.GW).status_code, 404)
+        self.assertNotIn("/api/v1/batch/no-such-feed", self.client.get("/openapi.json").json()["paths"])
+        # retired feeds answer 410 (tests/test_plans_samples.py) and are not advertised
         self.assertNotIn("/api/v1/batch/naval-escalation", self.client.get("/openapi.json").json()["paths"])
 
     def test_manifest_shows_access_and_status(self):
@@ -45,8 +47,8 @@ class FreeTierRouteTests(unittest.TestCase):
         self.assertEqual((weather["access"], weather["auth"], weather["status"]), ("free", "none", "live"))
         self.assertIn("rate_limit", weather)
         self.assertNotIn("price_sats", weather)
-        self.assertEqual(endpoints["/api/v1/batch/ercot-lmp"]["access"], "paid")
-        self.assertEqual(endpoints["/api/v1/batch/agri-yield"]["status"], "coming_soon")
+        self.assertEqual(endpoints["/api/v1/batch/btc-fees"]["access"], "paid")
+        self.assertEqual(endpoints["/api/v1/batch/spr-stockpile"]["status"], "coming_soon")   # no snapshot stored yet
 
     def test_terms_and_llms(self):
         terms = self.client.get("/terms").text
@@ -74,8 +76,8 @@ class FreeTierConfigTests(unittest.TestCase):
         names = [s["name"] for s in config["services"]]
         self.assertEqual(names[0], "free-feeds")
         self.assertEqual(names[-1], "public-free")
-        self.assertIn("batch-ercot-lmp", names)
-        self.assertNotIn("batch-naval-escalation", names)          # not offered: not sold
+        self.assertIn("batch-btc-fees", names)
+        self.assertNotIn("batch-naval-escalation", names)          # retired: not sold
         self.assertNotIn("batch-lng-supply-chain", names)          # free: no paid rule
         free = config["services"][0]
         self.assertEqual(free["auth"], "off")
@@ -83,8 +85,8 @@ class FreeTierConfigTests(unittest.TestCase):
         self.assertEqual(free["ratelimits"][0]["requests"], 30)
         rx = re.compile(free["pathregexp"])
         self.assertTrue(rx.match("/api/v1/batch/maritime-weather"))
-        self.assertFalse(rx.match("/api/v1/batch/ercot-lmp"))
-        self.assertFalse(rx.match("/api/v1/batch/maritime-weather/../ercot-lmp"))
+        self.assertFalse(rx.match("/api/v1/batch/btc-fees"))
+        self.assertFalse(rx.match("/api/v1/batch/maritime-weather/../btc-fees"))
         self.assertIn("ratelimits", config["services"][-1])
         self.assertTrue(re.match(config["services"][-1]["pathregexp"], "/terms"))
 

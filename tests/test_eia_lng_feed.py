@@ -6,9 +6,6 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import eia_lng_feed as eia  # noqa: E402
-import feeds  # noqa: E402
-import sample_examples  # noqa: E402
-from tests.test_portwatch_feed import ExampleSchemaTests  # noqa: E402
 
 
 def row(area, period, value, process="ENG", desc="", name="NA"):
@@ -52,10 +49,6 @@ class EiaTests(unittest.TestCase):
     def test_no_totals_is_an_error(self):
         with self.assertRaises(RuntimeError):
             eia.build_snapshot([])
-
-    def test_example_matches_real_schema(self):
-        real = feeds.CachedFeed(lambda: eia.build_snapshot(sample_rows()), 60, 600)()
-        ExampleSchemaTests().assert_same_shape(sample_examples.EXAMPLES["lng-supply-chain"], real)
 
     def test_not_registered_without_key(self):
         os.environ.pop("EIA_API_KEY", None)

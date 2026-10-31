@@ -119,6 +119,28 @@ class EiaClientTests(unittest.TestCase):
         with self.assertRaises(eia_api.EIAError):
             eia_api.get_rows(Limited(), "x/y", "k", {}, sleep=lambda s: None)
 
+    def test_grid_window_follows_newest_fuel_hour(self):
+        # Fuel mix published up to 06:00 while the wall clock is much later: the
+        # window must start 8 h before 06:00, not 8 h before now.
+        calls = []
+
+        class S:
+            def get(self, url, params=None, timeout=None):
+                calls.append((url, params))
+                if params["length"] == 1:
+                    return FakeResp({"response": {"total": 1, "data": [{"period": "2026-10-31T06"}]}})
+                if "fuel-type-data" in url:
+                    data = [fuel("US48", "2026-10-31T06", "NG", 100), fuel("US48", "2026-10-31T06", "WND", 50)]
+                else:
+                    data = [region("US48", "2026-10-31T06", "D", 140)]
+                return FakeResp({"response": {"total": len(data), "data": data}})
+
+        snap = grid.fetch(S(), "k")
+        self.assertEqual(snap["lower48"]["period_utc"], "2026-10-31T06")
+        self.assertEqual(snap["lower48"]["demand_mwh"], 140)
+        starts = {p["start"] for _, p in calls if "start" in p}
+        self.assertEqual(starts, {"2026-10-30T22"})
+
     def test_not_registered_without_key(self):
         os.environ.pop("EIA_API_KEY", None)
         self.assertFalse(grid.register_from_env())

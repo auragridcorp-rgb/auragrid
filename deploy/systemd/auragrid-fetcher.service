@@ -1,0 +1,23 @@
+[Unit]
+Description=AurAgrid feed fetcher (upstream sources -> var/feeds.db)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/AurAgrid
+# EIA_API_KEY=... (root-owned, chmod 600; read by systemd before dropping to ubuntu)
+EnvironmentFile=/etc/auragrid/env
+ExecStartPre=+/usr/bin/install -d -o ubuntu -g ubuntu /home/ubuntu/AurAgrid/var
+ExecStart=/home/ubuntu/AurAgrid/scripts/run_fetcher.sh
+Restart=always
+RestartSec=10
+# Read-only everywhere except the feed database: it can't touch prices, Aperture, payments or its own code.
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ubuntu/AurAgrid/var
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
