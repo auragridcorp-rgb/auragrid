@@ -88,17 +88,21 @@ class BackgroundFeedTests(unittest.TestCase):
 
 
 class WarmingRouteTests(unittest.TestCase):
-    def test_paid_route_answers_503_while_warming(self):
+    def test_route_answers_503_while_warming(self):
         from tests import test_plans_samples as t   # sets env and imports the app
         feed = feeds.BackgroundFeed(lambda: {"v": 1}, interval=60, max_stale=600, name="t")
-        feeds._PROVIDERS["agri-yield"] = feed
+        previous = feeds._PROVIDERS.get("spr-stockpile")
+        feeds._PROVIDERS["spr-stockpile"] = feed
         try:
             from fastapi.testclient import TestClient
-            r = TestClient(t.backend.app).get("/api/v1/batch/agri-yield", headers=t.GW)
+            r = TestClient(t.backend.app).get("/api/v1/batch/spr-stockpile", headers=t.GW)
             self.assertEqual(r.status_code, 503)
             self.assertEqual(r.json()["detail"], "Feed warming up")
         finally:
-            feeds._PROVIDERS.pop("agri-yield", None)
+            if previous is None:
+                feeds._PROVIDERS.pop("spr-stockpile", None)
+            else:
+                feeds._PROVIDERS["spr-stockpile"] = previous
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ production server. Start order: pricer, backend, then Aperture.
 |---|---|---|
 | `auragrid-pricer` | `scripts/run_pricer.sh` | 127.0.0.1:10010 (gRPC for Aperture dynamic pricing) |
 | `auragrid-api` | `scripts/run_backend.sh` | 127.0.0.1:8000 (FastAPI, never public) |
+| `auragrid-fetcher` | `scripts/run_fetcher.sh` | nothing (writes `var/feeds.db`; reads `EIA_API_KEY` from `/etc/auragrid/env`; sandboxed read-only except `var/`) |
 | `aperture` | `scripts/run_aperture.sh` | 0.0.0.0:8080 (public L402 gateway; firewall + OCI security list must allow TCP 8080) |
 
 Secrets are not in these files. The launchers read them at start:
@@ -22,7 +23,7 @@ Install or update:
 
     sudo cp deploy/systemd/*.service /etc/systemd/system/
     sudo systemctl daemon-reload
-    sudo systemctl enable --now auragrid-pricer auragrid-api aperture
+    sudo systemctl enable --now auragrid-pricer auragrid-fetcher auragrid-api aperture
 
 Check from outside the server:
 

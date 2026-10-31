@@ -14,16 +14,51 @@ services:
   hostregexp: .*
   address: 127.0.0.1:8000
   protocol: http
-  pathregexp: ^(/api/v1/energy/grid|/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/port\-congestion\-index|/api/v1/batch/spr\-stockpile)$
+  pathregexp: ^(/api/v1/batch/btc\-fees\-delayed|/api/v1/batch/earthquakes|/api/v1/energy/grid|/api/v1/batch/ln\-network\-daily|/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/spr\-stockpile)$
   auth: 'off'
   authwhitelistpaths:
-  - ^(/api/v1/energy/grid|/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/port\-congestion\-index|/api/v1/batch/spr\-stockpile)$
+  - ^(/api/v1/batch/btc\-fees\-delayed|/api/v1/batch/earthquakes|/api/v1/energy/grid|/api/v1/batch/ln\-network\-daily|/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/spr\-stockpile)$
   price: 0
   ratelimits:
-  - pathregexp: ^(/api/v1/energy/grid|/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/port\-congestion\-index|/api/v1/batch/spr\-stockpile)$
+  - pathregexp: ^(/api/v1/batch/btc\-fees\-delayed|/api/v1/batch/earthquakes|/api/v1/energy/grid|/api/v1/batch/ln\-network\-daily|/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/spr\-stockpile)$
     requests: 30
     per: 1m
     burst: 10
+- name: retired
+  hostregexp: .*
+  address: 127.0.0.1:8000
+  protocol: http
+  pathregexp: ^(/api/v1/batch/agri\-yield|/api/v1/batch/carbon\-credit\-audit|/api/v1/batch/critical\-minerals|/api/v1/batch/crop\-moisture|/api/v1/batch/curtailment\-risk|/api/v1/batch/dark\-fleet\-matrix|/api/v1/batch/ercot\-lmp|/api/v1/esg/carbon|/api/v1/batch/green\-compute|/api/v1/batch/hyperscaler\-power|/api/v1/logistics/cross\-border|/api/v1/maritime/congestion|/api/v1/batch/naval\-escalation|/api/v1/batch/port\-congestion\-index|/api/v1/sar/commodities|/api/v1/batch/sts\-anomalies|/api/v1/weather/micro\-climate|/api/v1/batch/wildfire\-carbon\-offset|/api/v1/pro/.*|/api/v1/sample/.*)$
+  auth: 'off'
+  authwhitelistpaths:
+  - ^(/api/v1/batch/agri\-yield|/api/v1/batch/carbon\-credit\-audit|/api/v1/batch/critical\-minerals|/api/v1/batch/crop\-moisture|/api/v1/batch/curtailment\-risk|/api/v1/batch/dark\-fleet\-matrix|/api/v1/batch/ercot\-lmp|/api/v1/esg/carbon|/api/v1/batch/green\-compute|/api/v1/batch/hyperscaler\-power|/api/v1/logistics/cross\-border|/api/v1/maritime/congestion|/api/v1/batch/naval\-escalation|/api/v1/batch/port\-congestion\-index|/api/v1/sar/commodities|/api/v1/batch/sts\-anomalies|/api/v1/weather/micro\-climate|/api/v1/batch/wildfire\-carbon\-offset|/api/v1/pro/.*|/api/v1/sample/.*)$
+  price: 0
+  ratelimits:
+  - pathregexp: ^(/api/v1/batch/agri\-yield|/api/v1/batch/carbon\-credit\-audit|/api/v1/batch/critical\-minerals|/api/v1/batch/crop\-moisture|/api/v1/batch/curtailment\-risk|/api/v1/batch/dark\-fleet\-matrix|/api/v1/batch/ercot\-lmp|/api/v1/esg/carbon|/api/v1/batch/green\-compute|/api/v1/batch/hyperscaler\-power|/api/v1/logistics/cross\-border|/api/v1/maritime/congestion|/api/v1/batch/naval\-escalation|/api/v1/batch/port\-congestion\-index|/api/v1/sar/commodities|/api/v1/batch/sts\-anomalies|/api/v1/weather/micro\-climate|/api/v1/batch/wildfire\-carbon\-offset|/api/v1/pro/.*|/api/v1/sample/.*)$
+    requests: 60
+    per: 1m
+    burst: 20
+- name: lightning-operator
+  hostregexp: .*
+  address: 127.0.0.1:8000
+  protocol: http
+  pathregexp: ^/api/v1/bundle/(btc-fees|ln-network)$
+  price: 5000
+  timeout: 2592000
+- name: batch-btc-fees
+  hostregexp: .*
+  address: 127.0.0.1:8000
+  protocol: http
+  pathregexp: ^/api/v1/batch/btc-fees$
+  price: 50
+  timeout: 3600
+- name: batch-ln-network
+  hostregexp: .*
+  address: 127.0.0.1:8000
+  protocol: http
+  pathregexp: ^/api/v1/batch/ln-network$
+  price: 100
+  timeout: 3600
 - name: public-free
   hostregexp: .*
   address: 127.0.0.1:8000
