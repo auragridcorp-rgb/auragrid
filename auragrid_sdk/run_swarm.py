@@ -5,8 +5,8 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 async def run():
-    # Hardcoding your API key directly ensures it never drops out of the shell session
-    client = genai.Client(api_key="REDACTED_REVOKED_KEY")
+    # Never hardcode the key: export GEMINI_API_KEY before running.
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
     
     params = StdioServerParameters(
         command="opentelemetry-instrument", 
@@ -28,7 +28,7 @@ async def run():
                 
             tool = types.Tool(function_declarations=gtools)
             
-            query = "Check the hyperscaler power forecast and tell me the grid stress index for Texas."
+            query = "What share of ERCOT's (Texas) latest reported generation was carbon-free?"
             print(f"\n👤 User: {query}")
             
             # Create a live chat session for multi-turn tool handling
