@@ -3,6 +3,7 @@
     python gen_aperture.py                     # aperture.base.yaml + pricing.yaml -> aperture.yaml
     python gen_aperture.py --check             # exit 1 if aperture.yaml is out of date
     python gen_aperture.py --out ~/.aperture/aperture.yaml --gateway-secret-file gateway.secret
+    python gen_aperture.py ... --listenaddr 0.0.0.0:443 --tls   # production (HTTPS, see deploy/README.md)
 
 Inputs
 ------
@@ -189,6 +190,9 @@ def main(argv=None) -> int:
     ap.add_argument("--gateway-secret-file", help="inject X-AurAgrid-Gateway into paid services")
     ap.add_argument("--listenaddr", help="override listenaddr (e.g. 0.0.0.0:8080 when there is no TLS front end yet)")
     ap.add_argument("--backend", help="override every service's backend address (host:port)")
+    ap.add_argument("--tls", action="store_true",
+                    help="serve HTTPS with the certificate in Aperture's dir (tls.cert/tls.key, "
+                         "installed by scripts/install_tls_cert.sh)")
     ap.add_argument("--check", action="store_true", help="print a diff and exit 1 if the output would change")
     args = ap.parse_args(argv)
     out = os.path.expanduser(args.out)
@@ -210,6 +214,8 @@ def main(argv=None) -> int:
     config = build(base, plans, btc, secret, access)
     if args.listenaddr:
         config["listenaddr"] = args.listenaddr
+    if args.tls:
+        config["insecure"] = False
     if args.backend:
         for svc in config["services"]:
             svc["address"] = args.backend

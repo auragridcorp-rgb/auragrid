@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 
 import requests
 
-HERO = ["ercot-lmp", "lng-supply-chain", "port-congestion-index"]
+RETIRED = ["/api/v1/batch/ercot-lmp", "/api/v1/batch/port-congestion-index", "/api/v1/sample/btc-fees"]
 results = []
 
 
@@ -39,33 +39,33 @@ def check_paid(base, path, label):
         record("FAIL", label, "expected 402 with an L402 challenge, got HTTP %d" % r.status_code)
 
 
-def check_samples(base):
-    for slug in HERO:
-        label = "sample " + slug
-        r = get(base, "/api/v1/sample/" + slug)
-        if r.status_code == 503:
-            record("WARN", label, "warming up (first sample appears after the delay); retry later")
-            continue
-        if r.status_code != 200:
-            record("FAIL", label, "HTTP %d (is /api/v1/sample reachable through Aperture's public-free rule?)" % r.status_code)
-            continue
-        try:
-            body = r.json()
-            if body.get("mode") == "schema_example":
-                ok = body.get("example") is True and body.get("synthetic") is True and body.get("notice")
-                record("WARN" if ok else "FAIL", label,
-                       "labeled schema example only: feed not connected" if ok else "example not labeled as synthetic")
-                continue
-            as_of = datetime.fromisoformat(body["as_of"])
-            age = (datetime.now(timezone.utc) - as_of).total_seconds()
-            if body.get("mode") != "sample_delayed" or not body.get("data"):
-                record("FAIL", label, "unexpected shape")
-            elif age < 0 or age > 6 * 3600:
-                record("WARN", label, "as_of is %.0f minutes old: the snapshotter may be stuck" % (age / 60))
-            else:
-                record("PASS", label, "real snapshot, as_of %.0f min ago, %d list(s) truncated" % (age / 60, len(body.get("truncated", {}))))
-        except Exception as exc:
-            record("FAIL", label, "bad body: %s" % exc)
+def check_retired(base):
+    """The old catalog and the old sample/pro routes must answer 410, never data."""
+    for path in RETIRED:
+        r = get(base, path)
+        record("PASS" if r.status_code == 410 else "FAIL", "retired " + path, "HTTP %d" % r.status_code)
+
+
+def check_signing(base, manifest):
+    """When the manifest says responses are signed, a live free endpoint must verify."""
+    sig = manifest.get("signature") or {}
+    if not sig.get("enabled"):
+        record("WARN", "signing", "manifest says response signing is off")
+        return
+    live = [e["path"] for e in manifest.get("endpoints", []) if e.get("access") == "free" and e.get("status") == "live"]
+    if not live:
+        record("WARN", "signing", "no live free endpoint to check")
+        return
+    try:
+        import attestation
+        nonce = "verify" + datetime.now(timezone.utc).strftime("%H%M%S%f")
+        r = get(base, live[0], headers={attestation.NONCE_HEADER: nonce})
+        ok = attestation.make_verifier(sig["pubkey"], "v2")(
+            r.content, r.headers, {"method": "GET", "target": r.request.path_url, "path": live[0], "nonce": nonce})
+        record("PASS" if ok else "FAIL", "signing " + live[0],
+               "X-AurAgrid-Signature-V2 verifies against the manifest pubkey" if ok else "signature missing or invalid")
+    except Exception as exc:
+        record("FAIL", "signing", str(exc))
 
 
 def check_offer(base, manifest):
@@ -171,7 +171,8 @@ def main(argv=None):
     if args.paid_path:
         check_paid(base, args.paid_path, "paywall " + args.paid_path)
     check_offer(base, manifest)
-    check_samples(base)
+    check_retired(base)
+    check_signing(base, manifest)
     check_quotes(base, manifest)
     check_discovery(base)
     check_operator_locked(base)
