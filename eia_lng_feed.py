@@ -161,6 +161,14 @@ feeds.describe(
     as_of=lambda snap: snap["period"])
 
 
+def fetch(api_key: str, session=None) -> dict:
+    session = session or requests.Session()
+    session.headers["User-Agent"] = "AurAgrid-EIA/1.0"
+    today = date.today()
+    start = _shift("%04d-%02d" % (today.year, today.month), -(MONTHS + 6))   # covers the publication lag
+    return build_snapshot(fetch_rows(session, api_key, start))
+
+
 def register_from_env() -> bool:
     key = os.environ.get("EIA_API_KEY")
     if not key:

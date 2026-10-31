@@ -208,3 +208,17 @@ services:
   authwhitelistpaths:
   - ^/(buy|llms\.txt|openapi\.json|agent-manifest\.json|\.well-known/ai-plugin\.json|api/v1/sample/[a-z0-9-]+|api/v1/price/[a-z0-9/-]+)$
   price: 0
+- name: batch-btc-fees
+  hostregexp: .*
+  address: 127.0.0.1:8000
+  protocol: http
+  pathregexp: ^/api/v1/batch/btc-fees$
+  price: 50
+  timeout: 3600
+- name: batch-ln-network
+  hostregexp: .*
+  address: 127.0.0.1:8000
+  protocol: http
+  pathregexp: ^/api/v1/batch/ln-network$
+  price: 100
+  timeout: 3600

@@ -35,3 +35,4 @@ egress_guard.tripped
 feeds.db
 feeds.db-shm
 feeds.db-wal
+var/

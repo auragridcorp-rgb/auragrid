@@ -10,7 +10,7 @@ zlib-compressed JSON. The writer is the fetcher process; the API only reads.
 
 Environment
 -----------
-AURAGRID_FEEDS_DB        database path (default feeds.db next to this file)
+AURAGRID_FEEDS_DB        database path (default var/feeds.db next to this file)
 AURAGRID_RAW_DAYS        raw retention in days (default 7)
 AURAGRID_DB_BUDGET_MB    warn when the database grows past this (default 2048)
 """
@@ -27,7 +27,7 @@ from typing import Optional
 log = logging.getLogger("auragrid.store")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.environ.get("AURAGRID_FEEDS_DB", os.path.join(HERE, "feeds.db"))
+DB_PATH = os.environ.get("AURAGRID_FEEDS_DB", os.path.join(HERE, "var", "feeds.db"))
 RAW_DAYS = int(os.environ.get("AURAGRID_RAW_DAYS", "7"))
 BUDGET_BYTES = int(os.environ.get("AURAGRID_DB_BUDGET_MB", "2048")) * 1024 * 1024
 
@@ -65,6 +65,7 @@ class Snapshot:
 class Store:
     def __init__(self, path: str = DB_PATH, raw_days: int = RAW_DAYS, clock=time.time):
         self.path, self.raw_days, self.clock = path, raw_days, clock
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         with self._db() as conn:
             conn.executescript(SCHEMA)
 
@@ -136,9 +137,9 @@ class Store:
 
     def daily_history(self, feed: str, limit: int = 90) -> list:
         with self._db() as conn:
-            rows = conn.execute("SELECT day, as_of, payload FROM daily WHERE feed=? ORDER BY day DESC LIMIT ?",
-                                (feed, limit)).fetchall()
-        return [{"day": d, "as_of": a, "data": _unpack(p)} for d, a, p in rows]
+            rows = conn.execute("SELECT day, as_of, payload, retrieved_at FROM daily WHERE feed=? "
+                                "ORDER BY day DESC LIMIT ?", (feed, limit)).fetchall()
+        return [{"day": d, "as_of": a, "data": _unpack(p), "retrieved_at": r} for d, a, p, r in rows]
 
     # -- housekeeping ----------------------------------------------------------------
     def prune(self) -> int:

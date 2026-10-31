@@ -44,6 +44,7 @@ from pricer import aggregate, fetch_all, round_sig
 GATEWAY_HEADER = "X-AurAgrid-Gateway"
 PUBLIC_SERVICE = "public-free"
 FREE_FEEDS_SERVICE = "free-feeds"
+RETIRED_SERVICE = "retired"
 PUBLIC_PATHS = (
     r"^/(buy|terms|llms\.txt|openapi\.json|agent-manifest\.json|\.well-known/ai-plugin\.json"
     r"|api/v1/sample/[a-z0-9-]+|api/v1/price/[a-z0-9/-]+)$"
@@ -79,7 +80,7 @@ def _matches_any(svc: dict, paths) -> bool:
 
 
 def build(base: dict, plans: list, btc_usd, gateway_secret=None, access=None) -> dict:
-    generated = {PUBLIC_SERVICE, FREE_FEEDS_SERVICE} | {p.name for p in plans}
+    generated = {PUBLIC_SERVICE, FREE_FEEDS_SERVICE, RETIRED_SERVICE} | {p.name for p in plans}
     hourly = [dict(s) for s in base.get("services") or [] if s.get("name") not in generated]
     if access is not None:
         # Only sell feeds listed as paid: the others have no data source (or are free).
@@ -117,11 +118,20 @@ def build(base: dict, plans: list, btc_usd, gateway_secret=None, access=None) ->
                  "ratelimits": [{"pathregexp": rx, "requests": access.requests_per_minute, "per": "1m",
                                  "burst": access.burst}]}]
 
+    retired = []
+    if access is not None and (access.retired or access.retired_prefixes):
+        parts = [re.escape(feed_path(k, BATCH_PREFIX)) for k in sorted(access.retired)]
+        parts += [re.escape("/api/v1/%s/" % p) + ".*" for p in sorted(access.retired_prefixes)]
+        rx = "^(%s)$" % "|".join(parts)
+        retired = [{"name": RETIRED_SERVICE, **common, "pathregexp": rx, "auth": "off",
+                    "authwhitelistpaths": [rx], "price": 0,
+                    "ratelimits": [{"pathregexp": rx, **PUBLIC_RATE}]}]
+
     paid = plan_services + hourly
     if gateway_secret:
         for svc in paid:
             svc["headers"] = {**(svc.get("headers") or {}), GATEWAY_HEADER: gateway_secret}
-    return {**normalize_settings(base), "services": free + paid + [public]}
+    return {**normalize_settings(base), "services": free + retired + paid + [public]}
 
 
 def validate(config: dict, plans: list, access=None) -> list:
@@ -144,7 +154,7 @@ def validate(config: dict, plans: list, access=None) -> list:
         for key in access.paid:
             path = feed_path(key, BATCH_PREFIX)
             first = next((s for s, rx in compiled if rx.match(path)), None)
-            if first is None or first["name"] in (FREE_FEEDS_SERVICE, PUBLIC_SERVICE):
+            if first is None or first["name"] in (FREE_FEEDS_SERVICE, PUBLIC_SERVICE, RETIRED_SERVICE):
                 problems.append("paid feed %s (%s) has no paid Aperture rule in the base config" % (key, path))
         for key in access.free:
             path = feed_path(key, BATCH_PREFIX)
