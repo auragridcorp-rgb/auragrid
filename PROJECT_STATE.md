@@ -183,6 +183,12 @@ unreachable old commits by ID until GitHub Support clears them.
   7 days to 2026-11-11 the public traffic was ~3,900 scanner requests and 2
   real discovery hits (`/openapi.json`); no real API calls.
 - OCI shape still 4 OCPU / 24 GB (see Host); the owner has to confirm billing.
+- LND on-chain balance is 16,316 sats, below the 30,000 anchor reserve (10k per
+  channel) used to fee-bump a force close. Left as is by the owner on 2026-11-11:
+  the two income channels (5.3M and 1M inbound) hold none of our funds yet; only
+  the 50k Amboss.Space channel (48,032 sats local, all outbound) is exposed.
+  Fix when needed: cooperatively close that channel (~150-400 sats fee at low
+  fee rates; income unaffected) or swap some balance on-chain.
 
 ## Tests
 
