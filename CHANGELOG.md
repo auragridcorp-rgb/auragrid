@@ -7,6 +7,10 @@ current state: `PROJECT_STATE.md`). Newest first.
 
 - **Listed on satring.com** (1,000-sat listing fee paid once, with the owner's
   approval). `langchain-auragrid` 0.2.0 rewritten for the current API.
+- **Git history purged again:** the mock revenue database and a leaked password
+  removed from every commit (force-push; all commit IDs changed).
+- Dashboard: a free feed whose source stops publishing is an amber notice, not
+  a red alert.
 
 - **No charge for degraded data.** The hourly paid feeds (`btc-fees`,
   `ln-network`) are priced through the pricer (`dynamicprice`). While a feed is

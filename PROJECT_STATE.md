@@ -150,13 +150,22 @@ regenerate Aperture's config (`deploy/README.md`) and restart it.
 
 ## Repository
 
-GitHub `auragridcorp-rgb/auragrid` (private), single branch `main`. Do not make it
-public as is: its history still holds the current dashboard password (commit
-`a197ecf`) and the old mock revenue database `auragrid.db`. Commit and
+GitHub `auragridcorp-rgb/auragrid` (private), single branch `main`. History was
+purged again on 2026-11-11 (see Security history) and scanned clean, so it can be
+made public. `langchain-auragrid` is public (owner, 2026-11-11). Commit and
 push from this server over SSH; `gh` is not installed, so PRs are opened in the
 browser. `logs/`, `var/`, `build/`, `dist/` and `*.egg-info/` are gitignored.
 
-## Security history (2026-10-31)
+## Security history
+
+**2026-11-11:** history rewritten with `git-filter-repo` and force-pushed again:
+removed `auragrid.db` (the old mock revenue database) and replaced the dashboard
+password and an old, unused bitcoind RPC password with `***REMOVED***`. Every
+commit ID changed; today's files are byte-identical. Pre-purge mirror backup
+(contains them; keep private): `~/auragrid-prepurge-20261111.git`. GitHub can keep
+unreachable old commits by ID until GitHub Support clears them.
+
+**2026-10-31:**
 
 - Git history rewritten with `git-filter-repo` and force-pushed: removed
   committed LND node folders `data/lnd-1/` and `data/lnd-2/` (wallets, macaroons,
@@ -174,9 +183,6 @@ browser. `logs/`, `var/`, `build/`, `dist/` and `*.egg-info/` are gitignored.
   7 days to 2026-11-11 the public traffic was ~3,900 scanner requests and 2
   real discovery hits (`/openapi.json`); no real API calls.
 - OCI shape still 4 OCPU / 24 GB (see Host); the owner has to confirm billing.
-- The dashboard password was reset on 2026-11-11 to a value that appears in git
-  history (commit `a197ecf`, private repo). Purging it needs a history rewrite
-  and force-push.
 
 ## Tests
 
