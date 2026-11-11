@@ -591,9 +591,20 @@ def proxy_health():
     disk = ops_monitor.disk_status()
     db_mb = round(STORE.size_bytes() / 2**20, 1)
     alerts = [s["label"] + " is " + s["state"] for s in services if not s["ok"]]
-    alerts += ["Feed %s: newest data %s old, %d failures" % (
-        f["feed"], "never" if f["age_s"] is None else "%dm" % (f["age_s"] // 60), f["failures"])
-        for f in feeds_ if f["enabled"] and not f["ok"]]
+    # A free feed whose fetches succeed but bring nothing new is the source lagging
+    # (e.g. EIA not publishing): a notice, not an alert. Failures or a stale paid feed alert.
+    paid_keys = {feed_key(slug) for slug, *_ in PAID_CATALOG}
+    notices = []
+    for f in feeds_:
+        if not f["enabled"] or f["ok"]:
+            continue
+        age = "never" if f["age_s"] is None else ("%.1fh" % (f["age_s"] / 3600) if f["age_s"] >= 5400
+                                                 else "%dm" % (f["age_s"] // 60))
+        if f["failures"] or f["feed"] in paid_keys or f["age_s"] is None:
+            alerts.append("Feed %s: newest data %s old, %d consecutive failures" % (f["feed"], age, f["failures"]))
+        else:
+            notices.append("Feed %s: the source has published nothing new for %s (fetches succeed; "
+                           "served marked stale)" % (f["feed"], age))
     if not cert.get("ok"):
         alerts.append("TLS certificate: " + (cert.get("error") or "%.1f days left" % cert["days_left"]))
     if not disk["ok"]:
@@ -604,6 +615,7 @@ def proxy_health():
         "checked_at": time.time(),
         "ok": not alerts,
         "alerts": alerts,
+        "notices": notices,
         "services": services,
         "feeds": feeds_,
         "cert": cert,
@@ -1264,15 +1276,23 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
         function renderHealth(h) {
             const alerts = $("alerts");
-            if (h.ok) {
+            const notices = h.notices || [];
+            const list = (items) => {
+                const ul = el("ul", "list-disc ml-6 mt-1 font-normal");
+                items.forEach((a) => ul.appendChild(el("li", "", a)));
+                return ul;
+            };
+            if (!h.ok) {
+                alerts.className = "rounded-xl px-5 py-3 text-sm font-semibold border bg-red-500/10 text-red-300 border-red-500/30";
+                const n = h.alerts.length;
+                alerts.replaceChildren(el("div", "", "⚠ " + n + (n > 1 ? " issues need" : " issue needs") + " attention"), list(h.alerts));
+                if (notices.length) alerts.append(el("div", "mt-2 text-amber-300", "Notices"), list(notices));
+            } else if (notices.length) {
+                alerts.className = "rounded-xl px-5 py-3 text-sm font-semibold border bg-amber-500/10 text-amber-200 border-amber-500/30";
+                alerts.replaceChildren(el("div", "", "✓ All systems running · " + notices.length + " notice" + (notices.length > 1 ? "s" : "")), list(notices));
+            } else {
                 alerts.className = "rounded-xl px-5 py-3 text-sm font-semibold border bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
                 alerts.textContent = "✓ All systems normal";
-            } else {
-                alerts.className = "rounded-xl px-5 py-3 text-sm font-semibold border bg-red-500/10 text-red-300 border-red-500/30";
-                alerts.replaceChildren(el("div", "", "⚠ " + h.alerts.length + " issue" + (h.alerts.length > 1 ? "s" : "") + " need attention"));
-                const ul = el("ul", "list-disc ml-6 mt-1 font-normal");
-                h.alerts.forEach((a) => ul.appendChild(el("li", "", a)));
-                alerts.appendChild(ul);
             }
             $("health-checked").textContent = "checked " + new Date(h.checked_at * 1000).toLocaleTimeString();
 
