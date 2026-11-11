@@ -1,0 +1,48 @@
+# Changelog
+
+AurAgrid's pivot to a lean, free-tier L402 data oracle (plan: `RESEARCH.md`;
+current state: `PROJECT_STATE.md`). Newest first.
+
+## 2026-11-11: Phase 4 (autonomous operations) and Phase 6 (report)
+
+- **No charge for degraded data.** The hourly paid feeds (`btc-fees`,
+  `ln-network`) are priced through the pricer (`dynamicprice`). While a feed is
+  stale or missing, the pricer quotes 0 sats and Aperture serves it without
+  payment; quotes, the manifest and responses say `degraded`. The 30-day
+  bundle keeps its static price.
+- **DVM under systemd** (`auragrid-dvm.service`, `Restart=always`, read-only
+  sandbox). The tmux session and the `@reboot` cron entry are gone; the crontab
+  is empty.
+- **Log rotation** for `logs/*.log` and bitcoind's `debug.log`
+  (`deploy/logrotate/auragrid`).
+- **Operator dashboard**: alert banner, service and process health, feed
+  freshness, TLS days left, disk, signing, and public traffic from Aperture's
+  access log with a paywall funnel (`ops_monitor.py`, `/api/proxy/health`,
+  `/api/proxy/traffic`). Still private (loopback + HTTP Basic).
+- `verify_deployment.py` reports a degraded paid feed as WARN.
+
+## 2026-10-31: HTTPS, signing, EIA, docs
+
+- HTTPS on :443 with a free Let's Encrypt IP certificate (6-day `shortlived`
+  profile, renewed twice daily by `auragrid-cert-renew.timer`); :8080 retired.
+- v2 response signing (`X-AurAgrid-Signature-V2`) with the production LND key
+  through a `message:write`-only macaroon; the hardened client ships in
+  `auragrid-mcp` 0.2.0.
+- Live EIA v2 connectors (grid mix, SPR, LNG) and `auragrid-fetcher.service`:
+  every upstream call happens in the fetcher, the API only reads stored
+  snapshots.
+- New catalog: 2 paid feeds + 1 bundle, 7 free feeds; old routes answer 410.
+- Git history purged of leaked secrets (LND node folders, Nostr key, API key);
+  affected keys and tokens revoked.
+
+## 2026-10-30: Phases 0-2 (inspect, research, lean architecture)
+
+- Research and source licensing in `RESEARCH.md`; only sources with clear
+  redistribution terms are used.
+- Removed everything that could move funds (sweep cron, liquidity sweeper,
+  swarm payer) and the mock revenue database; 363 legacy files deleted
+  (1.1 GB -> 80 MB).
+- SQLite snapshot store with rolling retention (raw 7 days, daily forever),
+  `provenance` on every response, free tier with per-IP rate limits, egress
+  guard, NOAA marine weather feed, NIP-90 DVM answering only AurAgrid jobs.
+- Dashboard password rotated.

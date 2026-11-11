@@ -5,10 +5,11 @@ production server. Start order: pricer, backend, then Aperture.
 
 | Unit | Runs | Listens on |
 |---|---|---|
-| `auragrid-pricer` | `scripts/run_pricer.sh` | 127.0.0.1:10010 (gRPC for Aperture dynamic pricing) |
+| `auragrid-pricer` | `scripts/run_pricer.sh` | 127.0.0.1:10010 (gRPC for Aperture dynamic pricing; prices the hourly paid feeds, 0 sats while degraded) |
 | `auragrid-api` | `scripts/run_backend.sh` | 127.0.0.1:8000 (FastAPI, never public) |
 | `auragrid-fetcher` | `scripts/run_fetcher.sh` | nothing (writes `var/feeds.db`; reads `EIA_API_KEY` from `/etc/auragrid/env`; sandboxed read-only except `var/`) |
 | `aperture` | `scripts/run_aperture.sh` | 0.0.0.0:443 (public L402 gateway, HTTPS; binds :443 via `CAP_NET_BIND_SERVICE`) |
+| `auragrid-dvm` | `dvm/nip90_worker.py` | nothing (Nostr relays outbound; appends to `logs/dvm.log`; read-only sandbox) |
 | `auragrid-cert-renew` (+ `.timer`) | `lego` (twice daily) | :80 only while renewing |
 
 Secrets are not in these files. The launchers read them at start:
@@ -24,7 +25,11 @@ Install or update:
 
     sudo cp deploy/systemd/*.service /etc/systemd/system/
     sudo systemctl daemon-reload
-    sudo systemctl enable --now auragrid-pricer auragrid-fetcher auragrid-api aperture
+    sudo systemctl enable --now auragrid-pricer auragrid-fetcher auragrid-api aperture auragrid-dvm
+    sudo install -m 644 deploy/logrotate/auragrid /etc/logrotate.d/auragrid
+
+The pricer must be up before Aperture serves paid routes: with `dynamicprice`,
+Aperture answers 500 on `btc-fees`/`ln-network` if it cannot reach the pricer.
 
 Check from outside the server:
 
