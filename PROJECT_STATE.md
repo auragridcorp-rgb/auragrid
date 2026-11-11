@@ -31,9 +31,10 @@ feed is never charged for while it is stale (see Degraded feeds).
 
 ## Host
 
-- OCI `VM.Standard.A1.Flex`, 4 OCPU / 24 GB, Ubuntu 20.04 (arm64), public IP
-  `84.12.79.124`. Pending: confirm in OCI billing whether Always Free is now
-  2 OCPU / 12 GB, and resize if so (`RESEARCH.md` §0).
+- OCI `VM.Standard.A1.Flex`, **2 OCPU / 12 GB** (resized by the owner on 2026-11-11, inside
+  the 2026 Always Free limits; the 4 OCPU / 24 GB shape had cost about £2), Ubuntu 20.04
+  (arm64), public IP `84.12.79.124` (kept across the resize). Every service, bitcoind
+  included, starts at boot; LND unlocks itself and its channels reconnect within minutes.
 - **Inbound firewall** (iptables, saved in `/etc/iptables/rules.v4`): 22 (SSH),
   80 (certificate renewals only), 443 (HTTPS), 9735 (Lightning). Everything else
   is rejected; 8080 was closed on 2026-10-31. The OCI security list must allow
@@ -48,7 +49,7 @@ feed is never charged for while it is stale (see Degraded feeds).
 | `auragrid-fetcher` | Pulls every upstream feed on its own schedule into `var/feeds.db` (SQLite). Reads `EIA_API_KEY` from `/etc/auragrid/env`; read-only filesystem except `var/` | - |
 | `auragrid-pricer` | gRPC price service for Aperture. On the request path for the hourly paid feeds (`dynamicprice`): static price when fresh, 0 sats while degraded. If it is down, those routes answer 500 | 127.0.0.1:10010 |
 | `auragrid-cert-renew.timer` | Twice daily; renews the certificate when due (see HTTPS) | :80 during renewal only |
-| `bitcoind` | Pruned mainnet node (`prune=10000`); chain backend for LND and source for `btc-fees`. `bitcoind.service` (enabled 2026-11-11; the running process was started by hand on 2026-10-21 and switches to the unit at the next reboot) | local RPC |
+| `bitcoind` | Pruned mainnet node (`prune=10000`); chain backend for LND and source for `btc-fees`. `bitcoind.service` (since the 2026-11-11 reboot) | local RPC |
 | `lnd` | Mainnet LND (`~/.lnd`); REST 127.0.0.1:8081, gRPC 127.0.0.1:10009; source for `ln-network`, issues L402 invoices, signs responses | local |
 | `auragrid-dvm` | `dvm/nip90_worker.py` (NIP-90 DVM), `Restart=always`, read-only sandbox, appends to `logs/dvm.log`. Relays: relay.damus.io, nos.lol, relay.primal.net. Replaced the tmux session on 2026-11-11 | - |
 
@@ -182,7 +183,6 @@ unreachable old commits by ID until GitHub Support clears them.
 - Revenue: 0 settled L402 invoices as of 2026-11-11 (`RESEARCH.md` §1). In the
   7 days to 2026-11-11 the public traffic was ~3,900 scanner requests and 2
   real discovery hits (`/openapi.json`); no real API calls.
-- OCI shape still 4 OCPU / 24 GB (see Host); the owner has to confirm billing.
 - LND on-chain balance is 16,316 sats, below the 30,000 anchor reserve (10k per
   channel) used to fee-bump a force close. Left as is by the owner on 2026-11-11:
   the two income channels (5.3M and 1M inbound) hold none of our funds yet; only
