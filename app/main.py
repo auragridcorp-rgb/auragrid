@@ -84,6 +84,7 @@ from l402_ledger import L402LedgerMiddleware, Ledger, hash_hex, token_payment_ha
 from pass_support import HOURLY, PlanRewriteMiddleware, PlanRouter, feed_path, load_access, load_plans
 from pricer import PriceEngine, normalize_path
 import jobs
+import ops_monitor
 from store import Store
 # Provider modules are imported for their provenance (feeds.describe); the API never
 # calls them: fetcher.py fetches, the API reads stored snapshots (jobs.StoreFeed).
@@ -112,6 +113,9 @@ if PUBLIC_URL and not PUBLIC_URL.startswith("https://"):
 @asynccontextmanager
 async def lifespan(_app):
     engine.start()   # background BTC/USD refresh; `engine` is defined below
+    # Parse Aperture's access log once in the background so the first dashboard
+    # load doesn't wait on it (`TRAFFIC` is defined below).
+    threading.Thread(target=TRAFFIC.refresh, kwargs={"force": True}, daemon=True).start()
     yield
     engine.stop()
 
@@ -251,7 +255,7 @@ def build_pricing(services: list):
     return pricing, unmatched, dead
 
 
-engine = PriceEngine(APERTURE_CONFIG, PRICING_CONFIG)
+engine = PriceEngine(APERTURE_CONFIG, PRICING_CONFIG, degraded=lambda key: jobs.feed_degraded(STORE, key))
 ledger = Ledger(os.environ.get("AURAGRID_LEDGER_DB", "ledger.db"))
 
 # Middleware order matters (last added = outermost):
@@ -517,6 +521,119 @@ def proxy_services():
 
 
 # ---------------------------------------------------------------------------
+# Operator monitoring: health and public traffic (ops_monitor.py)
+# ---------------------------------------------------------------------------
+def _route_sets():
+    paid = {normalize_path("/api/v1/" + slug) for slug, *_ in PAID_CATALOG}
+    paid |= {normalize_path(p) for plan in PLANS for p in plan.paths()}
+    free = {normalize_path("/api/v1/" + slug) for slug, *_ in OFFERED} - paid
+    return paid, free
+
+
+PAID_PATHS, FREE_PATHS = _route_sets()
+
+
+def classify_path(path: str) -> str:
+    """Traffic category for one request path (see ops_monitor.CATEGORIES)."""
+    norm = normalize_path(path) if path.startswith("/api/v1/") else None
+    if norm in PAID_PATHS:
+        return "paid"
+    if norm in FREE_PATHS:
+        return "free"
+    if path.startswith("/api/v1/price/"):
+        return "quote"
+    if path in ops_monitor.DISCOVERY:
+        return "discovery"
+    return "noise"
+
+
+def _own_ips() -> set:
+    host = re.sub(r"^https?://", "", PUBLIC_URL).split("/")[0].split(":")[0]
+    return {host} if re.fullmatch(r"[0-9.]+", host or "") else set()
+
+
+TRAFFIC = ops_monitor.TrafficLog(ops_monitor.APERTURE_LOG, classify_path, self_ips=_own_ips())
+JOBS = {job.key: job for job in jobs.all_jobs()}
+
+
+def _feed_health() -> list:
+    now = time.time()
+    rows = []
+    for key, job in JOBS.items():
+        st = STORE.status(key) or {}
+        last_ok = st.get("last_success")
+        age = now - last_ok if last_ok else None
+        # The fetcher, not this process, holds feed credentials (EIA_API_KEY), so a
+        # feed it has ever attempted counts as enabled even if job.enabled() is False here.
+        enabled = job.enabled() or bool(st.get("last_attempt"))
+        rows.append({
+            "feed": key,
+            "enabled": enabled,
+            "interval_s": job.interval,
+            "stale_after_s": job.stale_after,
+            "last_success": last_ok,
+            "last_attempt": st.get("last_attempt"),
+            "age_s": round(age) if age is not None else None,
+            "failures": st.get("consecutive_failures") or 0,
+            "last_error": st.get("last_error"),
+            "ok": enabled and age is not None and age <= job.stale_after,
+        })
+    return rows
+
+
+@app.get("/api/proxy/health", dependencies=[Depends(require_admin)], include_in_schema=False)
+def proxy_health():
+    services = ops_monitor.service_status()
+    feeds_ = _feed_health()
+    cert = ops_monitor.cert_status()
+    disk = ops_monitor.disk_status()
+    db_mb = round(STORE.size_bytes() / 2**20, 1)
+    alerts = [s["label"] + " is " + s["state"] for s in services if not s["ok"]]
+    alerts += ["Feed %s: last success %s ago, %d failures" % (
+        f["feed"], "never" if f["age_s"] is None else "%dm" % (f["age_s"] // 60), f["failures"])
+        for f in feeds_ if f["enabled"] and not f["ok"]]
+    if not cert.get("ok"):
+        alerts.append("TLS certificate: " + (cert.get("error") or "%.1f days left" % cert["days_left"]))
+    if not disk["ok"]:
+        alerts.append("Disk %.0f%% full" % disk["used_pct"])
+    if not SIGNING_ENABLED:
+        alerts.append("Response signing is off")
+    return {
+        "checked_at": time.time(),
+        "ok": not alerts,
+        "alerts": alerts,
+        "services": services,
+        "feeds": feeds_,
+        "cert": cert,
+        "disk": disk,
+        "feeds_db_mb": db_mb,
+        "signing_enabled": SIGNING_ENABLED,
+        "public_url": PUBLIC_URL or None,
+    }
+
+
+@app.get("/api/proxy/traffic", dependencies=[Depends(require_admin)], include_in_schema=False)
+def proxy_traffic(days: int = Query(7, ge=1, le=14)):
+    summary = TRAFFIC.summary(days)
+    cutoff = time.time() - days * 86400
+    try:
+        invoices, _ = snapshot()
+    except HTTPException:
+        invoices = None
+    if invoices is not None:
+        recent = [i for i in invoices if int(i.get("creation_date") or 0) >= cutoff]
+        summary["funnel"] = {
+            "paid_requests": summary["totals"]["paid"],
+            "invoices_issued": len(recent),
+            "invoices_settled": sum(1 for i in recent if is_settled(i)),
+            "sats_settled": sum(paid_sats(i) for i in recent if is_settled(i)),
+        }
+    else:
+        summary["funnel"] = None
+    return summary
+
+
+# ---------------------------------------------------------------------------
 # Agent manifest (public)
 # ---------------------------------------------------------------------------
 def _catalog_entries() -> list[dict]:
@@ -539,6 +656,8 @@ def _catalog_entries() -> list[dict]:
         if quote:
             entry["price_sats"] = quote["price_sats"]
             entry["pricing"] = quote["pricing"]
+            if quote.get("degraded"):
+                entry["status"] = "degraded"   # stale or missing: served free until fresh
             if "usd_price" in quote:
                 entry["usd_price"] = quote["usd_price"]
             entry["quote_url"] = "/api/v1/price/" + slug
@@ -667,6 +786,8 @@ def _feed_handler(slug: str):
             "plan": getattr(request.state, "auragrid_plan_kind", HOURLY),
             "served_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "stale": stale,
+            # Paid feeds are never charged for while stale: the pricer quotes 0 sats.
+            "degraded": stale,
             "provenance": feeds.provenance(key, data, retrieved_at),
             "data": data,
         }
@@ -782,10 +903,24 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        :root {
+            --s-paid: #3987e5; --s-free: #d95926; --s-quote: #199e70; --s-discovery: #c98500;
+            --ok: #10b981; --bad: #f87171; --warn: #fbbf24;
+        }
+        .chart { display: flex; align-items: flex-end; gap: 6px; height: 180px; border-bottom: 1px solid #334155; }
+        .chart .col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end;
+                      gap: 2px; cursor: default; border-radius: 4px; }
+        .chart .col:hover { background: rgba(148, 163, 184, 0.08); }
+        .chart .seg { width: 70%; margin: 0 auto; min-height: 2px; }
+        .chart .seg.top { border-radius: 4px 4px 0 0; }
+        .chart-x { display: flex; gap: 6px; }
+        .chart-x span { flex: 1; text-align: center; }
+        .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+        #tooltip { position: fixed; pointer-events: none; z-index: 60; display: none; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col bg-slate-900 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-black">
-    <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50 px-8 py-5 flex justify-between items-center shadow-sm">
+    <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50 px-4 md:px-8 py-5 flex flex-wrap gap-2 justify-between items-center shadow-sm">
         <div class="flex items-center space-x-4">
             <div class="relative flex h-4 w-4">
               <span id="pulse" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-500 opacity-75"></span>
@@ -799,7 +934,94 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         </div>
     </header>
 
-    <main class="flex-1 p-8 max-w-7xl mx-auto w-full space-y-8">
+    <main class="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full space-y-8">
+        <div id="alerts" class="rounded-xl px-5 py-3 text-sm font-semibold border bg-slate-800/60 text-slate-400 border-slate-700">
+            Checking system health...
+        </div>
+
+        <!-- System health -->
+        <div class="glass-card p-6 rounded-2xl">
+            <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center"><i class="fas fa-heart-pulse mr-2 text-slate-500"></i>System Health</h2>
+                <span id="health-checked" class="text-[11px] font-mono text-slate-500"></span>
+            </div>
+            <div id="svc-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm"></div>
+            <div id="infra-row" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4 text-sm"></div>
+        </div>
+
+        <!-- Feeds -->
+        <div class="glass-card p-6 rounded-2xl">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center"><i class="fas fa-database mr-2 text-slate-500"></i>Data Feeds</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="text-xs uppercase text-slate-500">
+                        <tr><th class="pb-2 font-semibold">Feed</th><th class="pb-2 font-semibold">Status</th>
+                            <th class="pb-2 font-semibold">Last success</th><th class="pb-2 font-semibold">Fetch every</th>
+                            <th class="pb-2 font-semibold">Stale after</th><th class="pb-2 font-semibold">Failures</th>
+                            <th class="pb-2 font-semibold">Last error</th></tr>
+                    </thead>
+                    <tbody id="feeds-tbody" class="divide-y divide-slate-700/50 font-mono text-xs whitespace-nowrap [&_td]:pr-4"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Traffic -->
+        <div class="glass-card p-6 rounded-2xl space-y-6">
+            <div class="flex flex-wrap justify-between items-center gap-2">
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center"><i class="fas fa-route mr-2 text-slate-500"></i>Public Traffic</h2>
+                <div class="flex items-center gap-1 text-xs font-mono" id="range-btns">
+                    <button data-days="1" class="px-2.5 py-1 rounded border border-slate-700 text-slate-400">24h</button>
+                    <button data-days="7" class="px-2.5 py-1 rounded border border-slate-700 text-slate-400">7d</button>
+                    <button data-days="14" class="px-2.5 py-1 rounded border border-slate-700 text-slate-400">14d</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="traffic-kpis"></div>
+
+            <div>
+                <div class="text-xs text-slate-400 mb-1">Paywall funnel</div>
+                <div id="funnel" class="flex flex-wrap items-center gap-2 font-mono text-sm"></div>
+            </div>
+
+            <div>
+                <div class="flex flex-wrap justify-between items-baseline gap-2 mb-3">
+                    <div class="text-xs text-slate-400">Real requests per day (scanner noise excluded)</div>
+                    <div id="legend" class="flex flex-wrap gap-4 text-xs text-slate-300"></div>
+                </div>
+                <div id="chart" class="chart"></div>
+                <div id="chart-x" class="chart-x text-[10px] font-mono text-slate-500 mt-1"></div>
+                <details class="mt-3 text-xs">
+                    <summary class="cursor-pointer text-slate-400">Show as table</summary>
+                    <table class="mt-2 w-full text-left font-mono">
+                        <thead class="text-slate-500"><tr><th>Day</th><th>Paid</th><th>Free</th><th>Quotes</th><th>Discovery</th><th>Clients</th><th>Noise</th></tr></thead>
+                        <tbody id="daily-tbody" class="text-slate-300"></tbody>
+                    </table>
+                </details>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                    <div class="text-xs text-slate-400 mb-2">Top real endpoints</div>
+                    <div id="top-real" class="space-y-1 font-mono text-xs"></div>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400 mb-2">Top scanner probes</div>
+                    <div id="top-noise" class="space-y-1 font-mono text-xs"></div>
+                </div>
+            </div>
+
+            <div>
+                <div class="text-xs text-slate-400 mb-2">Latest real requests</div>
+                <div class="overflow-x-auto max-h-72 overflow-y-auto scrollbar-hide">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="text-slate-500 sticky top-0 bg-slate-800/90"><tr><th class="py-1">Time (UTC)</th><th>Type</th><th>Path</th><th>Client</th><th>User agent</th></tr></thead>
+                        <tbody id="recent-tbody" class="divide-y divide-slate-700/50 text-slate-300"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="traffic-foot" class="text-[11px] font-mono text-slate-500"></div>
+        </div>
+
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 pt-2 flex items-center"><i class="fas fa-coins mr-2 text-slate-500"></i>Revenue &amp; Node</h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div class="glass-card p-6 rounded-2xl">
                 <div class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center"><i class="fas fa-coins mr-2 text-slate-500"></i>Settled Revenue</div>
@@ -878,6 +1100,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <div class="fixed bottom-4 right-4 z-50 px-3.5 py-2 rounded-lg font-mono text-xs bg-slate-900 border border-slate-700 text-slate-300">
         <span id="sync-label">Waiting for first sync</span>
     </div>
+    <div id="tooltip" class="px-3 py-2 rounded-lg bg-slate-950 border border-slate-600 text-xs font-mono text-slate-200 shadow-lg"></div>
 
     <script>
         const $ = (id) => document.getElementById(id);
@@ -1002,6 +1225,242 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             }
         }
 
+        // ---------------- Health & traffic ----------------
+        const SERIES = [
+            { key: "paid", label: "Paid", color: "var(--s-paid)" },
+            { key: "free", label: "Free", color: "var(--s-free)" },
+            { key: "quote", label: "Quotes", color: "var(--s-quote)" },
+            { key: "discovery", label: "Discovery", color: "var(--s-discovery)" },
+        ];
+        let trafficDays = 7;
+        try { trafficDays = Number(localStorage.getItem("ag-days")) || 7; } catch (e) {}
+
+        function ago(sec) {
+            if (sec === null || sec === undefined) return "never";
+            sec = Math.max(0, Math.round(sec));
+            if (sec < 90) return sec + "s ago";
+            if (sec < 5400) return Math.round(sec / 60) + "m ago";
+            if (sec < 172800) return (sec / 3600).toFixed(1) + "h ago";
+            return (sec / 86400).toFixed(1) + "d ago";
+        }
+        function dur(sec) {
+            if (sec >= 86400) return (sec / 86400).toFixed(sec % 86400 ? 1 : 0) + "d";
+            if (sec >= 3600) return (sec / 3600).toFixed(sec % 3600 ? 1 : 0) + "h";
+            return Math.round(sec / 60) + "m";
+        }
+        function badge(ok, okText, badText) {
+            return el("span", "inline-flex items-center gap-1.5 font-semibold " + (ok ? "text-emerald-400" : "text-red-400"),
+                (ok ? "✓ " : "✗ ") + (ok ? okText : badText));
+        }
+        function tile(label, value, sub, valueCls) {
+            const box = el("div", "p-4 bg-slate-800/40 rounded-xl border border-slate-700/50");
+            box.appendChild(el("div", "text-xs text-slate-400", label));
+            box.appendChild(el("div", "text-2xl font-black mt-1 " + (valueCls || "text-white"), value));
+            if (sub) box.appendChild(el("div", "text-[11px] text-slate-500 mt-0.5", sub));
+            return box;
+        }
+
+        function renderHealth(h) {
+            const alerts = $("alerts");
+            if (h.ok) {
+                alerts.className = "rounded-xl px-5 py-3 text-sm font-semibold border bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
+                alerts.textContent = "✓ All systems normal";
+            } else {
+                alerts.className = "rounded-xl px-5 py-3 text-sm font-semibold border bg-red-500/10 text-red-300 border-red-500/30";
+                alerts.replaceChildren(el("div", "", "⚠ " + h.alerts.length + " issue" + (h.alerts.length > 1 ? "s" : "") + " need attention"));
+                const ul = el("ul", "list-disc ml-6 mt-1 font-normal");
+                h.alerts.forEach((a) => ul.appendChild(el("li", "", a)));
+                alerts.appendChild(ul);
+            }
+            $("health-checked").textContent = "checked " + new Date(h.checked_at * 1000).toLocaleTimeString();
+
+            const now = h.checked_at;
+            const grid = $("svc-grid");
+            grid.replaceChildren();
+            h.services.forEach((s) => {
+                const box = el("div", "p-3 bg-slate-800/40 rounded-xl border " + (s.ok ? "border-slate-700/50" : "border-red-500/50"));
+                const top = el("div", "flex justify-between items-center gap-2");
+                top.appendChild(el("span", "text-slate-200 font-semibold truncate", s.label));
+                top.appendChild(badge(s.ok, s.state, s.state));
+                box.appendChild(top);
+                let sub = s.name + (s.kind === "process" ? " (process)" : "");
+                if (s.since) sub += " · up " + ago(now - s.since).replace(" ago", "");
+                if (s.restarts) sub += " · " + s.restarts + " restarts since boot";
+                if (s.next_run) sub = "last " + ago(now - s.last_run) + " (" + (s.last_result || "?") + ") · next in " + ago(s.next_run - now).replace(" ago", "");
+                box.appendChild(el("div", "text-[11px] font-mono text-slate-500 mt-1 truncate", sub));
+                grid.appendChild(box);
+            });
+
+            const c = h.cert, d = h.disk;
+            $("infra-row").replaceChildren(
+                tile("TLS certificate", c.error ? "error" : c.days_left + " days",
+                     c.error ? c.error : "expires " + new Date(c.not_after * 1000).toUTCString().slice(5, 22) + " UTC",
+                     c.ok ? "text-white" : "text-red-400"),
+                tile("Response signing", h.signing_enabled ? "On" : "Off", "X-AurAgrid-Signature-V2",
+                     h.signing_enabled ? "text-white" : "text-red-400"),
+                tile("Disk used", d.used_pct + "%", d.free_gb + " GB free", d.ok ? "text-white" : "text-red-400"),
+                tile("Feed database", h.feeds_db_mb + " MB", "var/feeds.db"),
+            );
+
+            const body = $("feeds-tbody");
+            body.replaceChildren();
+            h.feeds.forEach((f) => {
+                const tr = el("tr");
+                const st = el("td", "py-2");
+                st.appendChild(f.enabled ? badge(f.ok, "fresh", "stale") : el("span", "text-slate-500", "disabled"));
+                const err = el("td", "py-2 text-red-300 max-w-[260px] truncate", f.last_error || "");
+                if (f.last_error) err.title = f.last_error;
+                tr.append(el("td", "py-2 text-slate-200", f.feed), st, el("td", "py-2", ago(f.age_s)),
+                          el("td", "py-2 text-slate-400", dur(f.interval_s)), el("td", "py-2 text-slate-400", dur(f.stale_after_s)),
+                          el("td", "py-2 " + (f.failures ? "text-red-300" : "text-slate-400"), String(f.failures)), err);
+                body.appendChild(tr);
+            });
+        }
+
+        function showTip(evt, lines) {
+            const tip = $("tooltip");
+            tip.replaceChildren(...lines.map((l) => el("div", l.cls || "", l.text)));
+            tip.style.display = "block";
+            const x = Math.min(evt.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+            tip.style.left = x + "px";
+            tip.style.top = (evt.clientY + 14) + "px";
+        }
+        function hideTip() { $("tooltip").style.display = "none"; }
+
+        function renderChart(daily) {
+            const chart = $("chart"), xs = $("chart-x");
+            chart.replaceChildren(); xs.replaceChildren();
+            const legend = $("legend");
+            legend.replaceChildren(...SERIES.map((s) => {
+                const item = el("span", "flex items-center");
+                const sw = el("span", "swatch"); sw.style.background = s.color;
+                item.append(sw, document.createTextNode(s.label));
+                return item;
+            }));
+            const totals = daily.map((d) => SERIES.reduce((a, s) => a + d[s.key], 0));
+            const max = Math.max(...totals);
+            if (max === 0) {
+                chart.appendChild(el("div", "w-full self-center text-center text-slate-500 text-sm", "No real requests in this window. Only scanners."));
+            }
+            const step = daily.length > 7 ? 2 : 1;
+            daily.forEach((d, i) => {
+                const col = el("div", "col");
+                if (max > 0) {
+                    const segs = SERIES.filter((s) => d[s.key] > 0).reverse();  // top of stack first
+                    segs.forEach((s, j) => {
+                        const seg = el("div", "seg" + (j === 0 ? " top" : ""));
+                        seg.style.background = s.color;
+                        seg.style.height = (d[s.key] / max * 100) + "%";
+                        col.appendChild(seg);
+                    });
+                }
+                const lines = [{ text: d.day, cls: "text-slate-400 mb-1" }]
+                    .concat(SERIES.map((s) => ({ text: s.label + ": " + num(d[s.key]) })))
+                    .concat([{ text: "Clients: " + num(d.clients) }, { text: "Scanner noise: " + num(d.noise), cls: "text-slate-500" }]);
+                col.addEventListener("mousemove", (e) => showTip(e, lines));
+                col.addEventListener("mouseleave", hideTip);
+                chart.appendChild(col);
+                xs.appendChild(el("span", "", i % step === 0 ? d.day.slice(5) : ""));
+            });
+
+            const tb = $("daily-tbody");
+            tb.replaceChildren();
+            daily.slice().reverse().forEach((d) => {
+                const tr = el("tr");
+                [d.day, d.paid, d.free, d.quote, d.discovery, d.clients, d.noise].forEach((v) => tr.appendChild(el("td", "pr-3", String(v))));
+                tb.appendChild(tr);
+            });
+        }
+
+        function renderTop(target, rows, empty) {
+            const box = $(target);
+            box.replaceChildren();
+            if (!rows.length) { box.appendChild(el("div", "text-slate-500", empty)); return; }
+            const max = rows[0].requests;
+            rows.forEach((r) => {
+                const row = el("div", "flex items-center gap-3");
+                const bar = el("div", "h-1.5 rounded bg-slate-500/60");
+                bar.style.width = Math.max(4, r.requests / max * 80) + "px";
+                const label = el("span", "flex-1 truncate text-slate-300", r.path); label.title = r.path;
+                row.append(label, bar, el("span", "w-12 text-right text-slate-400", num(r.requests)));
+                box.appendChild(row);
+            });
+        }
+
+        function renderTraffic(t) {
+            document.querySelectorAll("#range-btns button").forEach((b) => {
+                const on = Number(b.dataset.days) === t.days;
+                b.className = "px-2.5 py-1 rounded border " + (on ? "border-cyan-500 text-cyan-300 bg-cyan-500/10" : "border-slate-700 text-slate-400");
+            });
+            const T = t.totals, real = T.paid + T.free + T.quote;
+            $("traffic-kpis").replaceChildren(
+                tile("API calls", num(real), num(T.paid) + " paid · " + num(T.free) + " free · " + num(T.quote) + " quotes"),
+                tile("Discovery hits", num(T.discovery), "manifest, llms.txt, openapi, /buy"),
+                tile("Real clients", num(t.clients.real), "distinct IPs, excluding scanners"),
+                tile("Scanner noise", num(T.noise), num(t.clients.noise) + " IPs probing other paths", "text-slate-400"),
+            );
+
+            const f = t.funnel, fun = $("funnel");
+            fun.replaceChildren();
+            if (!f) {
+                fun.appendChild(el("span", "text-red-300", "LND unavailable, invoice data missing"));
+            } else {
+                const steps = [["requests to paid routes", f.paid_requests], ["invoices issued", f.invoices_issued],
+                               ["paid", f.invoices_settled], ["sats earned", f.sats_settled]];
+                steps.forEach(([label, v], i) => {
+                    if (i) fun.appendChild(el("i", "fas fa-arrow-right text-slate-600 mx-1"));
+                    const s = el("span", "px-3 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700/50");
+                    s.append(el("b", "text-white", num(v) + " "), el("span", "text-slate-400", label));
+                    fun.appendChild(s);
+                });
+            }
+
+            renderChart(t.daily);
+            const realTop = ["paid", "free", "quote", "discovery"]
+                .flatMap((c) => t.top_paths[c]).sort((a, b) => b.requests - a.requests).slice(0, 8);
+            renderTop("top-real", realTop, "No real requests yet.");
+            renderTop("top-noise", t.top_paths.noise, "None.");
+
+            const body = $("recent-tbody");
+            body.replaceChildren();
+            if (!t.recent.length) {
+                const tr = el("tr"); const td = el("td", "py-3 text-slate-500", "No real requests yet."); td.colSpan = 5;
+                tr.appendChild(td); body.appendChild(tr);
+            }
+            t.recent.forEach((r) => {
+                const tr = el("tr");
+                const sw = el("span", "swatch");
+                sw.style.background = (SERIES.find((s) => s.key === r.category) || {}).color || "#64748b";
+                const type = el("td", "py-1.5 pr-3 whitespace-nowrap"); type.append(sw, document.createTextNode(r.category));
+                const ua = el("td", "py-1.5 text-slate-500 max-w-[280px] truncate", r.user_agent); ua.title = r.user_agent;
+                tr.append(el("td", "py-1.5 pr-3 whitespace-nowrap", r.time), type,
+                          el("td", "py-1.5 pr-3 text-slate-200", r.method + " " + r.path), el("td", "py-1.5 pr-3", r.ip), ua);
+                body.appendChild(tr);
+            });
+
+            const starts = t.aperture_starts.length ? t.aperture_starts[t.aperture_starts.length - 1] + " UTC" : "n/a";
+            $("traffic-foot").textContent = "Source: " + t.log_path + " · last Aperture start " + starts +
+                " · " + num(t.self_requests) + " requests from this server excluded";
+        }
+
+        async function refreshOps() {
+            if (document.hidden) return;
+            const [h, t] = await Promise.allSettled([getJSON("/api/proxy/health"), getJSON("/api/proxy/traffic?days=" + trafficDays)]);
+            if (h.status === "fulfilled") renderHealth(h.value);
+            else { $("alerts").className = "rounded-xl px-5 py-3 text-sm font-semibold border bg-red-500/10 text-red-300 border-red-500/30";
+                   $("alerts").textContent = "⚠ Health check failed: " + h.reason.message; }
+            if (t.status === "fulfilled") renderTraffic(t.value);
+        }
+
+        document.querySelectorAll("#range-btns button").forEach((b) => b.addEventListener("click", () => {
+            trafficDays = Number(b.dataset.days);
+            try { localStorage.setItem("ag-days", String(trafficDays)); } catch (e) {}
+            refreshOps();
+        }));
+        document.addEventListener("visibilitychange", () => { if (!document.hidden) { refresh(); refreshOps(); } });
+
+        refreshOps();
+        setInterval(refreshOps, 30000);
         refresh();
         setInterval(refresh, 8000);
     </script>

@@ -77,6 +77,20 @@ LIMITS = {
 }
 
 
+def feed_degraded(store, key: str, clock=time.time) -> bool:
+    """True when a feed would be served stale or not at all (503): never charge for it.
+
+    Only feeds with freshness limits count; anything else is never "degraded".
+    Uses fetch_status.last_success, which is when the newest snapshot was stored.
+    """
+    limits = LIMITS.get(key)
+    if limits is None:
+        return False
+    status = store.status(key) or {}
+    last_ok = status.get("last_success")
+    return last_ok is None or clock() - last_ok > limits[0]
+
+
 class StoreFeed:
     """API-side provider: the newest stored snapshot of a feed, never a live upstream call."""
 

@@ -52,6 +52,10 @@ services:
   pathregexp: ^/api/v1/batch/btc-fees$
   price: 50
   timeout: 3600
+  dynamicprice:
+    enabled: true
+    grpcaddress: 127.0.0.1:10010
+    insecure: true
 - name: batch-ln-network
   hostregexp: .*
   address: 127.0.0.1:8000
@@ -59,6 +63,10 @@ services:
   pathregexp: ^/api/v1/batch/ln-network$
   price: 100
   timeout: 3600
+  dynamicprice:
+    enabled: true
+    grpcaddress: 127.0.0.1:10010
+    insecure: true
 - name: public-free
   hostregexp: .*
   address: 127.0.0.1:8000
