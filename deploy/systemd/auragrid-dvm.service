@@ -1,0 +1,22 @@
+[Unit]
+Description=AurAgrid NIP-90 DVM worker (Nostr relays -> free AurAgrid feeds)
+After=network-online.target auragrid-api.service
+Wants=network-online.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/AurAgrid
+ExecStart=/home/ubuntu/miniconda/envs/auragrid_env/bin/python -u dvm/nip90_worker.py
+# Same file the old tmux session tee'd into; rotated by deploy/logrotate/auragrid.
+StandardOutput=append:/home/ubuntu/AurAgrid/logs/dvm.log
+StandardError=inherit
+Restart=always
+RestartSec=30
+# It only reads its key and calls the local API and relays: no writes anywhere.
+ProtectSystem=strict
+ProtectHome=read-only
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

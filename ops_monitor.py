@@ -36,12 +36,12 @@ UNITS = [
     ("auragrid-fetcher", "Feed fetcher", "running"),
     ("auragrid-pricer", "USD pricer", "running"),
     ("lnd", "Lightning node", "running"),
+    ("auragrid-dvm", "NIP-90 DVM worker", "running"),
     ("auragrid-cert-renew.timer", "TLS renewal timer", "waiting"),
 ]
-# Long-running processes that are not systemd units (bitcoind, the DVM in tmux).
+# Long-running processes that are not systemd units.
 PROCESSES = [
     ("bitcoind", "Bitcoin Core", r"(^|/)bitcoind( |$)"),
-    ("dvm", "NIP-90 DVM worker", r"dvm/nip90_worker\.py"),
 ]
 
 CATEGORIES = ("paid", "free", "quote", "discovery", "noise")
