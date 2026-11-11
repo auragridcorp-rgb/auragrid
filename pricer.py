@@ -143,9 +143,12 @@ def _load_yaml(path: str):
 # Engine
 # ---------------------------------------------------------------------------
 class PriceEngine:
-    def __init__(self, aperture_config="aperture.yaml", pricing_config="pricing.yaml"):
+    def __init__(self, aperture_config="aperture.yaml", pricing_config="pricing.yaml", degraded=None):
         self.aperture_config = aperture_config
         self.pricing_config = pricing_config
+        # degraded(feed_key) -> True while that feed is stale or missing; such paths
+        # are priced at 0 sats, which makes Aperture serve them without payment.
+        self.degraded = degraded
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._thread = None
@@ -248,11 +251,35 @@ class PriceEngine:
         return None, age, "unavailable"
 
     # -- pricing ----------------------------------------------------------------
+    @staticmethod
+    def feed_key(path: str) -> str:
+        """Feed behind a path: '/api/v1/batch/btc-fees' and '/api/v1/bundle/btc-fees' -> 'btc-fees'."""
+        from jobs import LIMITS
+        key = normalize_path(path)
+        if key not in LIMITS and "/" in key and key.split("/", 1)[1] in LIMITS:
+            return key.split("/", 1)[1]   # plan prefix (bundle/, pass/, ...)
+        return key
+
+    def is_degraded(self, path: str) -> bool:
+        if self.degraded is None:
+            return False
+        try:
+            return bool(self.degraded(self.feed_key(path)))
+        except Exception:
+            log.exception("Freshness check failed for %s; charging normally", path)
+            return False
+
     def _price(self, path: str):
         rule = self._static_rule(path)
         static = int(rule["price"]) if rule and rule.get("price") is not None else None
         usd = self._usd_target(path)
         btc, age, state = self.btc_state()
+
+        # Only services Aperture prices through this pricer can be made free; a static
+        # price (bundles) is what Aperture charges whatever we quote.
+        if static and (rule.get("dynamicprice") or {}).get("enabled") and self.is_degraded(path):
+            return {"sats": 0, "mode": "degraded_free", "usd": usd, "btc": btc,
+                    "age": age, "state": state, "rule": rule}
 
         if usd is not None and btc is not None:
             sats = round_sig(max(MIN_SATS, round(usd / btc * 100_000_000)))
@@ -284,6 +311,10 @@ class PriceEngine:
             "tolerance_pct": QUOTE_TOLERANCE_PCT,
             "stale": r["state"] != "fresh",
         }
+        if r["mode"] == "degraded_free":
+            out["degraded"] = True
+            out["note"] = ("This feed's data is stale or unavailable, so it is served without "
+                           "payment until fresh data returns.")
         if r["mode"] == "usd_pegged":
             out["usd_price"] = r["usd"]
             out["btc_usd"] = round(r["btc"], 2)
@@ -295,6 +326,26 @@ class PriceEngine:
 # ---------------------------------------------------------------------------
 # gRPC server for Aperture's dynamic pricing
 # ---------------------------------------------------------------------------
+def store_degraded_check(store=None, cache_seconds: float = 5.0):
+    """degraded(feed_key) backed by the snapshot store, cached briefly per key."""
+    from jobs import feed_degraded
+    from store import Store
+
+    store = store or Store()
+    cache = {}
+
+    def degraded(key: str) -> bool:
+        now = time.monotonic()
+        hit = cache.get(key)
+        if hit and now - hit[0] < cache_seconds:
+            return hit[1]
+        value = feed_degraded(store, key)
+        cache[key] = (now, value)
+        return value
+
+    return degraded
+
+
 def build_server(engine: PriceEngine, address: str):
     import grpc
     import pricesrpc_pb2 as pb              # generated from Aperture's own .proto
@@ -306,7 +357,10 @@ def build_server(engine: PriceEngine, address: str):
             if sats is None:
                 log.error("No price for path %r", request.path)
                 context.abort(grpc.StatusCode.NOT_FOUND, "no price for path")
-            log.info("GetPrice %s -> %d sats", request.path, sats)
+            if sats == 0:
+                log.warning("GetPrice %s -> 0 sats: feed degraded, serving without payment", request.path)
+            else:
+                log.info("GetPrice %s -> %d sats", request.path, sats)
             return pb.GetPriceResponse(price_sats=sats)
 
     from concurrent import futures
@@ -323,6 +377,7 @@ def main():
     engine = PriceEngine(
         os.environ.get("AURAGRID_APERTURE_CONFIG", "aperture.yaml"),
         os.environ.get("AURAGRID_PRICING_CONFIG", "pricing.yaml"),
+        degraded=store_degraded_check(),
     )
     engine.start()
     address = os.environ.get("AURAGRID_PRICER_ADDR", "127.0.0.1:10010")
