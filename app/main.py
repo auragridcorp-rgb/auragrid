@@ -255,7 +255,7 @@ def build_pricing(services: list):
     return pricing, unmatched, dead
 
 
-engine = PriceEngine(APERTURE_CONFIG, PRICING_CONFIG)
+engine = PriceEngine(APERTURE_CONFIG, PRICING_CONFIG, degraded=lambda key: jobs.feed_degraded(STORE, key))
 ledger = Ledger(os.environ.get("AURAGRID_LEDGER_DB", "ledger.db"))
 
 # Middleware order matters (last added = outermost):
@@ -656,6 +656,8 @@ def _catalog_entries() -> list[dict]:
         if quote:
             entry["price_sats"] = quote["price_sats"]
             entry["pricing"] = quote["pricing"]
+            if quote.get("degraded"):
+                entry["status"] = "degraded"   # stale or missing: served free until fresh
             if "usd_price" in quote:
                 entry["usd_price"] = quote["usd_price"]
             entry["quote_url"] = "/api/v1/price/" + slug
@@ -784,6 +786,8 @@ def _feed_handler(slug: str):
             "plan": getattr(request.state, "auragrid_plan_kind", HOURLY),
             "served_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "stale": stale,
+            # Paid feeds are never charged for while stale: the pricer quotes 0 sats.
+            "degraded": stale,
             "provenance": feeds.provenance(key, data, retrieved_at),
             "data": data,
         }

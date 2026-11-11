@@ -32,7 +32,15 @@ def check_paid(base, path, label):
     r = get(base, path)
     header = r.headers.get("WWW-Authenticate", "")
     if r.status_code == 200:
-        record("FAIL", label, "returned 200 WITHOUT payment: the paywall is bypassed")
+        # A degraded (stale or missing) paid feed is deliberately free until it recovers.
+        try:
+            quote = get(base, "/api/v1/price/" + path[len("/api/v1/"):]).json()
+        except Exception:
+            quote = {}
+        if quote.get("degraded"):
+            record("WARN", label, "served free: the feed is degraded (stale), check the fetcher")
+        else:
+            record("FAIL", label, "returned 200 WITHOUT payment: the paywall is bypassed")
     elif r.status_code == 402 and "invoice=" in header and "macaroon=" in header:
         record("PASS", label, "402 with invoice + macaroon")
     else:
@@ -97,6 +105,9 @@ def check_quotes(base, manifest):
         r = get(base, path)
         try:
             q = r.json()
+            if r.status_code == 200 and q.get("degraded"):
+                record("WARN", "quote " + path.split("/price/")[1], "0 sats: feed degraded, served free")
+                continue
             ok = r.status_code == 200 and int(q["price_sats"]) > 0
             record("PASS" if ok else "FAIL", "quote " + path.split("/price/")[1],
                    "%s sats (%s%s)" % (q.get("price_sats"), q.get("pricing"), ", STALE" if q.get("stale") else "") if ok

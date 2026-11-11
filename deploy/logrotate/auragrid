@@ -1,0 +1,27 @@
+# Install: sudo cp deploy/logrotate/auragrid /etc/logrotate.d/auragrid
+# Run daily by logrotate.timer. Aperture and LND rotate their own logs.
+# copytruncate: the writers (systemd append for the DVM, bitcoind) keep their file open.
+
+/home/ubuntu/AurAgrid/logs/*.log {
+    su ubuntu ubuntu
+    weekly
+    maxsize 20M
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}
+
+/home/ubuntu/.bitcoin/debug.log {
+    su ubuntu ubuntu
+    weekly
+    maxsize 50M
+    rotate 4
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}
