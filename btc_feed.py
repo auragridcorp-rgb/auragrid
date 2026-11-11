@@ -62,6 +62,8 @@ def build_snapshot(rpc) -> dict:
     return {
         "dataset": "AurAgrid Bitcoin Fee and Mempool Monitor",
         "network": chain["chain"],
+        # When the node was queried: fee estimates and the mempool change between blocks.
+        "observed_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "tip": {"height": stats["height"], "block_time": stats["time"],
                 "block_time_utc": datetime.fromtimestamp(stats["time"], timezone.utc).isoformat(timespec="seconds")},
         "fee_estimates": estimates,
@@ -92,4 +94,6 @@ feeds.describe(
     url="bitcoin-core-rpc:estimatesmartfee,getmempoolinfo,getblockstats",
     terms_url="/terms",
     attribution="Computed by AurAgrid from its own Bitcoin Core node.",
-    as_of=lambda snap: snap["tip"]["block_time_utc"])
+    # The observation time, not the tip's block time: the mempool and fee estimates move
+    # every minute, and keying on the block stored (and served) one snapshot per block.
+    as_of=lambda snap: snap.get("observed_at") or snap["tip"]["block_time_utc"])

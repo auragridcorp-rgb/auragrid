@@ -562,7 +562,8 @@ def _feed_health() -> list:
     for key, job in JOBS.items():
         st = STORE.status(key) or {}
         last_ok = st.get("last_success")
-        age = now - last_ok if last_ok else None
+        newest = STORE.latest_retrieved_at(key)
+        age = now - newest if newest else None   # newest stored data, as StoreFeed measures it
         # The fetcher, not this process, holds feed credentials (EIA_API_KEY), so a
         # feed it has ever attempted counts as enabled even if job.enabled() is False here.
         enabled = job.enabled() or bool(st.get("last_attempt"))
@@ -572,6 +573,7 @@ def _feed_health() -> list:
             "interval_s": job.interval,
             "stale_after_s": job.stale_after,
             "last_success": last_ok,
+            "last_success_age_s": round(now - last_ok) if last_ok else None,
             "last_attempt": st.get("last_attempt"),
             "age_s": round(age) if age is not None else None,
             "failures": st.get("consecutive_failures") or 0,
@@ -589,7 +591,7 @@ def proxy_health():
     disk = ops_monitor.disk_status()
     db_mb = round(STORE.size_bytes() / 2**20, 1)
     alerts = [s["label"] + " is " + s["state"] for s in services if not s["ok"]]
-    alerts += ["Feed %s: last success %s ago, %d failures" % (
+    alerts += ["Feed %s: newest data %s old, %d failures" % (
         f["feed"], "never" if f["age_s"] is None else "%dm" % (f["age_s"] // 60), f["failures"])
         for f in feeds_ if f["enabled"] and not f["ok"]]
     if not cert.get("ok"):
@@ -956,7 +958,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 <table class="w-full text-left text-sm">
                     <thead class="text-xs uppercase text-slate-500">
                         <tr><th class="pb-2 font-semibold">Feed</th><th class="pb-2 font-semibold">Status</th>
-                            <th class="pb-2 font-semibold">Last success</th><th class="pb-2 font-semibold">Fetch every</th>
+                            <th class="pb-2 font-semibold">Newest data</th><th class="pb-2 font-semibold">Last fetch OK</th><th class="pb-2 font-semibold">Fetch every</th>
                             <th class="pb-2 font-semibold">Stale after</th><th class="pb-2 font-semibold">Failures</th>
                             <th class="pb-2 font-semibold">Last error</th></tr>
                     </thead>
@@ -1310,7 +1312,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 st.appendChild(f.enabled ? badge(f.ok, "fresh", "stale") : el("span", "text-slate-500", "disabled"));
                 const err = el("td", "py-2 text-red-300 max-w-[260px] truncate", f.last_error || "");
                 if (f.last_error) err.title = f.last_error;
-                tr.append(el("td", "py-2 text-slate-200", f.feed), st, el("td", "py-2", ago(f.age_s)),
+                tr.append(el("td", "py-2 text-slate-200", f.feed), st, el("td", "py-2", ago(f.age_s)), el("td", "py-2 text-slate-400", ago(f.last_success_age_s)),
                           el("td", "py-2 text-slate-400", dur(f.interval_s)), el("td", "py-2 text-slate-400", dur(f.stale_after_s)),
                           el("td", "py-2 " + (f.failures ? "text-red-300" : "text-slate-400"), String(f.failures)), err);
                 body.appendChild(tr);

@@ -20,6 +20,14 @@ current state: `PROJECT_STATE.md`). Newest first.
   access log with a paywall funnel (`ops_monitor.py`, `/api/proxy/health`,
   `/api/proxy/traffic`). Still private (loopback + HTTP Basic).
 - `verify_deployment.py` reports a degraded paid feed as WARN.
+- **Fix: `btc-fees` refreshes every minute again.** Its `as_of` was the tip's
+  block time, so the store kept one snapshot per block and the paid feed served
+  data frozen at the last block (and marked it stale after 15 minutes without
+  one). It now uses the observation time (`observed_at`).
+- Freshness (stale, degraded, dashboard) is measured from the newest stored
+  snapshot, not the last successful fetch: a fetch that returns unchanged data
+  doesn't make a feed fresh. `energy/grid` currently shows stale because EIA's
+  newest hour is about a day old.
 
 ## 2026-10-31: HTTPS, signing, EIA, docs
 
