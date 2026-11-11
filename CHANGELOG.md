@@ -5,6 +5,9 @@ current state: `PROJECT_STATE.md`). Newest first.
 
 ## 2026-11-11: Phase 4 (autonomous operations) and Phase 6 (report)
 
+- **Listed on satring.com** (1,000-sat listing fee paid once, with the owner's
+  approval). `langchain-auragrid` 0.2.0 rewritten for the current API.
+
 - **No charge for degraded data.** The hourly paid feeds (`btc-fees`,
   `ln-network`) are priced through the pricer (`dynamicprice`). While a feed is
   stale or missing, the pricer quotes 0 sats and Aperture serves it without

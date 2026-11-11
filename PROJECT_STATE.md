@@ -137,9 +137,22 @@ regenerate Aperture's config (`deploy/README.md`) and restart it.
 - `langchain_auragrid/`: `crew_tool.py` only; it imports `AurAgridOracleTool` from
   the separate `langchain-auragrid` repo, which has not been updated for the pivot.
 
+## Listings
+
+- **satring.com** (L402 directory): listed 2026-11-11 as "AurAgrid: Bitcoin Fees &
+  Lightning Network Data" (`/services/auragrid-bitcoin-fees-lightning-network-data`),
+  URL `https://84.12.79.124/api/v1/batch/btc-fees`, categories data + finance.
+  The 1,000-sat listing fee (+3 sats routing) was paid once from the production
+  LND with the owner's explicit approval; this is the only payment the node has
+  made. Edit token: `~/.auragrid/satring_edit_token` (chmod 600; needed to change
+  the listing). Payment proof: `~/.auragrid/satring_payment.json`.
+- `langchain-auragrid` 0.2.0 (GitHub, not on PyPI) and `auragrid-mcp` 0.2.0 (PyPI).
+
 ## Repository
 
-GitHub `auragridcorp-rgb/auragrid` (private), single branch `main`. Commit and
+GitHub `auragridcorp-rgb/auragrid` (private), single branch `main`. Do not make it
+public as is: its history still holds the current dashboard password (commit
+`a197ecf`) and the old mock revenue database `auragrid.db`. Commit and
 push from this server over SSH; `gh` is not installed, so PRs are opened in the
 browser. `logs/`, `var/`, `build/`, `dist/` and `*.egg-info/` are gitignored.
 
