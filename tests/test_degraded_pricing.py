@@ -19,13 +19,11 @@ NOW = 1_800_000_000.0
 
 
 class FakeStore:
-    def __init__(self, last_success):
-        self.last_success = last_success   # feed -> epoch or None
+    def __init__(self, newest):
+        self.newest = newest   # feed -> retrieved_at of its newest snapshot
 
-    def status(self, key):
-        if key not in self.last_success:
-            return None
-        return {"last_success": self.last_success[key]}
+    def latest_retrieved_at(self, key):
+        return self.newest.get(key)
 
 
 class FeedDegradedTests(unittest.TestCase):
@@ -36,6 +34,29 @@ class FeedDegradedTests(unittest.TestCase):
         self.assertTrue(jobs.feed_degraded(store, "ln-network", clock))      # 4 h old, limit 3 h
         self.assertTrue(jobs.feed_degraded(FakeStore({}), "btc-fees", clock))  # never fetched
         self.assertFalse(jobs.feed_degraded(store, "not-a-feed", clock))     # no limits: never degraded
+
+
+class StoreFreshnessTests(unittest.TestCase):
+    def test_unchanged_upstream_data_does_not_count_as_fresh(self):
+        from store import Store
+        now = [NOW - 3600]
+        store = Store(os.path.join(tempfile.mkdtemp(), "feeds.db"), clock=lambda: now[0])
+        store.save("btc-fees", {"x": 1}, "2026-11-11T09:00:00+00:00")
+        now[0] = NOW
+        store.save("btc-fees", {"x": 1}, "2026-11-11T09:00:00+00:00")   # same as_of: not stored
+        self.assertTrue(jobs.feed_degraded(store, "btc-fees", lambda: NOW))   # 1 h > 15 min
+        store.save("btc-fees", {"x": 2}, "2026-11-11T10:00:00+00:00")
+        self.assertFalse(jobs.feed_degraded(store, "btc-fees", lambda: NOW))
+
+
+class BtcAsOfTests(unittest.TestCase):
+    def test_btc_fees_as_of_is_the_observation_time(self):
+        import btc_feed  # noqa: F401  (registers the source)
+        import feeds
+        snap = {"observed_at": "2026-11-11T09:41:00+00:00", "tip": {"block_time_utc": "2026-11-11T09:00:00+00:00"}}
+        self.assertEqual(feeds.as_of_for("btc-fees", snap), "2026-11-11T09:41:00+00:00")
+        del snap["observed_at"]   # snapshots stored before the change
+        self.assertEqual(feeds.as_of_for("btc-fees", snap), "2026-11-11T09:00:00+00:00")
 
 
 class DegradedPricingTests(unittest.TestCase):
@@ -93,9 +114,9 @@ class DegradedPricingTests(unittest.TestCase):
         calls = []
 
         class CountingStore(FakeStore):
-            def status(self, key):
+            def latest_retrieved_at(self, key):
                 calls.append(key)
-                return super().status(key)
+                return super().latest_retrieved_at(key)
 
         check = pricer.store_degraded_check(CountingStore({}), cache_seconds=60)
         self.assertTrue(check("btc-fees"))

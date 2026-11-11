@@ -129,6 +129,12 @@ class Store:
                                "ORDER BY retrieved_at DESC LIMIT 1", (feed, cutoff)).fetchone()
         return Snapshot(feed, _unpack(row[0]), row[1], row[2]) if row else None
 
+    def latest_retrieved_at(self, feed: str) -> Optional[float]:
+        """When the newest stored snapshot was fetched (what freshness is measured from)."""
+        with self._db() as conn:
+            row = conn.execute("SELECT MAX(retrieved_at) FROM raw WHERE feed=?", (feed,)).fetchone()
+        return row[0] if row else None
+
     def status(self, feed: str) -> Optional[dict]:
         with self._db() as conn:
             row = conn.execute("SELECT last_attempt, last_success, last_error, consecutive_failures "
