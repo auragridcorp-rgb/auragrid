@@ -1,0 +1,18 @@
+[Unit]
+Description=Bitcoin Core (pruned mainnet; chain backend for LND and the btc-fees feed)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+# bitcoin.conf sets daemon=1; run in the foreground so systemd supervises it.
+ExecStart=/usr/local/bin/bitcoind -daemon=0 -datadir=/home/ubuntu/.bitcoin -conf=/home/ubuntu/.bitcoin/bitcoin.conf
+ExecStop=/usr/local/bin/bitcoin-cli -datadir=/home/ubuntu/.bitcoin stop
+# Flushing the chainstate (dbcache) can take a few minutes.
+TimeoutStopSec=600
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

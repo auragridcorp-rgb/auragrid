@@ -48,7 +48,7 @@ feed is never charged for while it is stale (see Degraded feeds).
 | `auragrid-fetcher` | Pulls every upstream feed on its own schedule into `var/feeds.db` (SQLite). Reads `EIA_API_KEY` from `/etc/auragrid/env`; read-only filesystem except `var/` | - |
 | `auragrid-pricer` | gRPC price service for Aperture. On the request path for the hourly paid feeds (`dynamicprice`): static price when fresh, 0 sats while degraded. If it is down, those routes answer 500 | 127.0.0.1:10010 |
 | `auragrid-cert-renew.timer` | Twice daily; renews the certificate when due (see HTTPS) | :80 during renewal only |
-| `bitcoind` | Pruned mainnet node (`prune=10000`); source for `btc-fees` | local RPC |
+| `bitcoind` | Pruned mainnet node (`prune=10000`); chain backend for LND and source for `btc-fees`. `bitcoind.service` (enabled 2026-11-11; the running process was started by hand on 2026-10-21 and switches to the unit at the next reboot) | local RPC |
 | `lnd` | Mainnet LND (`~/.lnd`); REST 127.0.0.1:8081, gRPC 127.0.0.1:10009; source for `ln-network`, issues L402 invoices, signs responses | local |
 | `auragrid-dvm` | `dvm/nip90_worker.py` (NIP-90 DVM), `Restart=always`, read-only sandbox, appends to `logs/dvm.log`. Relays: relay.damus.io, nos.lol, relay.primal.net. Replaced the tmux session on 2026-11-11 | - |
 
