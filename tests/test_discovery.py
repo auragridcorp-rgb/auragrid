@@ -68,7 +68,9 @@ class DiscoveryMatchesRoutes(unittest.TestCase):
 
     def test_status(self):
         st = self.client.get("/status.json").json()
-        self.assertEqual({f["path"] for f in st["feeds"]}, {"/api/v1/" + slug for slug, *_ in backend.OFFERED})
+        self.assertEqual({f["path"] for f in st["feeds"]},
+                         {"/api/v1/" + slug for slug, *_ in backend.OFFERED} |
+                         {"/api/v1/" + k for k in backend.derived.ENDPOINTS})
 
     def test_every_documented_path_routes_somewhere(self):
         for path in self.live:

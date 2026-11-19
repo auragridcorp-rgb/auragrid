@@ -114,7 +114,10 @@ def build(base: dict, plans: list, btc_usd, gateway_secret=None, access=None) ->
               "ratelimits": [{"pathregexp": PUBLIC_PATHS, **PUBLIC_RATE}]}
     free = []
     if access is not None and access.free:
-        rx = "^(%s)$" % "|".join(re.escape(feed_path(k, BATCH_PREFIX)) for k in sorted(access.free))
+        import derived   # derived endpoints are free previews, served under the same rule
+        free_paths = [feed_path(k, BATCH_PREFIX) for k in sorted(access.free)]
+        free_paths += ["/api/v1/" + k for k in sorted(derived.ENDPOINTS)]
+        rx = "^(%s)$" % "|".join(re.escape(p) for p in free_paths)
         free = [{"name": FREE_FEEDS_SERVICE, **common, "pathregexp": rx, "auth": "off",
                  "authwhitelistpaths": [rx], "price": 0,
                  "ratelimits": [{"pathregexp": rx, "requests": access.requests_per_minute, "per": "1m",

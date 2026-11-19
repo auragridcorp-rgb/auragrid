@@ -14,13 +14,13 @@ services:
   hostregexp: .*
   address: 127.0.0.1:8000
   protocol: http
-  pathregexp: ^(/api/v1/batch/btc\-fees\-delayed|/api/v1/batch/earthquakes|/api/v1/energy/grid|/api/v1/batch/ln\-network\-daily|/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/spr\-stockpile)$
+  pathregexp: ^(/api/v1/batch/btc\-fees\-delayed|/api/v1/batch/earthquakes|/api/v1/energy/grid|/api/v1/batch/ln\-network\-daily|/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/spr\-stockpile|/api/v1/derived/area\-risk|/api/v1/derived/energy\-snapshot|/api/v1/derived/fee\-timing|/api/v1/derived/grid\-carbon)$
   auth: 'off'
   authwhitelistpaths:
-  - ^(/api/v1/batch/btc\-fees\-delayed|/api/v1/batch/earthquakes|/api/v1/energy/grid|/api/v1/batch/ln\-network\-daily|/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/spr\-stockpile)$
+  - ^(/api/v1/batch/btc\-fees\-delayed|/api/v1/batch/earthquakes|/api/v1/energy/grid|/api/v1/batch/ln\-network\-daily|/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/spr\-stockpile|/api/v1/derived/area\-risk|/api/v1/derived/energy\-snapshot|/api/v1/derived/fee\-timing|/api/v1/derived/grid\-carbon)$
   price: 0
   ratelimits:
-  - pathregexp: ^(/api/v1/batch/btc\-fees\-delayed|/api/v1/batch/earthquakes|/api/v1/energy/grid|/api/v1/batch/ln\-network\-daily|/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/spr\-stockpile)$
+  - pathregexp: ^(/api/v1/batch/btc\-fees\-delayed|/api/v1/batch/earthquakes|/api/v1/energy/grid|/api/v1/batch/ln\-network\-daily|/api/v1/batch/lng\-supply\-chain|/api/v1/batch/maritime\-weather|/api/v1/batch/spr\-stockpile|/api/v1/derived/area\-risk|/api/v1/derived/energy\-snapshot|/api/v1/derived/fee\-timing|/api/v1/derived/grid\-carbon)$
     requests: 30
     per: 1m
     burst: 10
