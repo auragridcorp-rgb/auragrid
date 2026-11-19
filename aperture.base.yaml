@@ -215,7 +215,7 @@ services:
   address: 127.0.0.1:8000
   protocol: http
   pathregexp: ^/api/v1/batch/btc-fees$
-  price: 50
+  price: 10
   timeout: 3600
   dynamicprice:
     enabled: true
@@ -226,7 +226,7 @@ services:
   address: 127.0.0.1:8000
   protocol: http
   pathregexp: ^/api/v1/batch/ln-network$
-  price: 100
+  price: 20
   timeout: 3600
   dynamicprice:
     enabled: true

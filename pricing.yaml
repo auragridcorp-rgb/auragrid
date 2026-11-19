@@ -1,6 +1,11 @@
-# USD targets for the pricer (pricer.py), keyed by feed. Nothing is USD-pegged
-# right now: paid prices are static sats in aperture.base.yaml.
-endpoints: {}
+# USD targets for the pricer (pricer.py), keyed by feed: the hourly token is priced
+# at this many USD, converted at the pricer's live BTC/USD (median of public feeds).
+# If no trustworthy BTC/USD is available, the static sats in aperture.base.yaml apply.
+# 2026-11-19: cut to the sub-cent norm for agent payments (btc-fees is the hero:
+# the best-evidenced category, so the cheapest). Judgment, not measured demand.
+endpoints:
+  btc-fees: 0.005     # per 1-hour token
+  ln-network: 0.01    # per 1-hour token
 
 # 30-day passes and bundles (pass_support.py). After editing, regenerate
 # Aperture's config with `python gen_aperture.py` and restart Aperture.

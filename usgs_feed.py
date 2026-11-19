@@ -65,4 +65,5 @@ feeds.describe(
     "earthquakes", source="U.S. Geological Survey (USGS) Earthquake Hazards Program real-time feeds",
     url=DAY_URL, terms_url="https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
     attribution="Credit: U.S. Geological Survey. Public domain; USGS does not endorse AurAgrid.",
+    license='U.S. public domain (USGS); credit the U.S. Geological Survey',
     as_of=lambda snap: snap["generated_utc"])

@@ -60,6 +60,7 @@ Revenue attribution
 Check /api/proxy/stats -> "ledger" to confirm the ledger is capturing calls.
 Requires PyYAML for reading aperture.yaml.
 """
+import json
 import logging
 import os
 import re
@@ -73,7 +74,10 @@ from datetime import datetime, timezone
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.openapi.utils import get_openapi
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from pydantic import BaseModel, Field
+from typing import Optional
 
 import feeds
 from app.buy_page import BUY_HTML
@@ -179,6 +183,13 @@ def feed_key(slug: str) -> str:
 # Only feeds listed in pricing.yaml `access:` are offered; the rest have no data source yet.
 OFFERED = [entry for entry in CATALOG if feed_key(entry[0]) in ACCESS.offered]
 PAID_CATALOG = [entry for entry in OFFERED if feed_key(entry[0]) in ACCESS.paid]
+# Free sample of each paid feed: its delayed/daily copy (real data, true as_of), when offered free.
+SAMPLE_PATHS = {d["source"]: feed_path(k, BATCH_PREFIX) for k, d in jobs.DERIVED.items()
+                if d["source"] in ACCESS.paid and k in ACCESS.free}
+
+
+def sample_url(key: str):
+    return SAMPLE_PATHS.get(key)
 
 # Every offered feed is served from the snapshot store written by fetcher.py.
 STORE = Store()
@@ -306,7 +317,7 @@ for _plan in PLANS:
         PRICE_INDEX.setdefault(PLAN_PRICES[_plan.name], []).append(_plan.display_name())
 
 # Shown in the revenue breakdown only (not advertised as a data endpoint).
-EXTRA_SERVICES = ["Mainnet Lightning Routing Liquidity"]
+EXTRA_SERVICES = []   # nothing is sold outside the catalog and plans
 UNATTRIBUTED = "Unattributed"
 
 BY_SLUG = {slug: name for slug, name, _, _ in CATALOG}
@@ -396,7 +407,7 @@ def require_gateway(request: Request) -> None:
 # LND snapshot cache: one fetch shared by all dashboard endpoints
 # ---------------------------------------------------------------------------
 CACHE_TTL_SECONDS = 5.0
-_cache = {"t": 0.0, "invoices": [], "node": {}}
+_cache = {"t": 0.0, "invoices": [], "node": {}, "total": 0}
 _lock = threading.Lock()
 
 
@@ -404,7 +415,12 @@ def snapshot():
     with _lock:
         if time.monotonic() - _cache["t"] > CACHE_TTL_SECONDS:
             try:
-                _cache["invoices"] = lnd.get_invoices()
+                page = getattr(lnd, "get_invoices_page", None)   # test doubles may lack it
+                if page:
+                    _cache["invoices"], _cache["total"] = page()
+                else:
+                    _cache["invoices"] = lnd.get_invoices()
+                    _cache["total"] = len(_cache["invoices"])
                 _cache["node"] = lnd.get_mainnet_node_stats()
             except Exception as exc:
                 log.exception("LND fetch failed")
@@ -466,7 +482,9 @@ def proxy_stats():
     return {
         "total_revenue_sats": sum(revenue.values()),
         "settled_count": settled_count,
-        "transaction_count": total_count,
+        # All invoices ever issued (LND's index), not just the newest batch analysed above.
+        "transaction_count": _cache.get("total") or total_count,
+        "transactions_analysed": total_count,
         "success_rate": round(settled_count / total_count * 100, 1) if total_count else 0.0,
         # Only real values from the node; None renders as "n/a" in the UI.
         "active_channels": node.get("active_channels"),
@@ -552,7 +570,8 @@ def _own_ips() -> set:
     return {host} if re.fullmatch(r"[0-9.]+", host or "") else set()
 
 
-TRAFFIC = ops_monitor.TrafficLog(ops_monitor.APERTURE_LOG, classify_path, self_ips=_own_ips())
+TRAFFIC = ops_monitor.TrafficLog(ops_monitor.APERTURE_LOG, classify_path, self_ips=_own_ips(),
+                                 sample_paths=set(SAMPLE_PATHS.values()))
 JOBS = {job.key: job for job in jobs.all_jobs()}
 
 
@@ -630,6 +649,8 @@ def proxy_health():
 def proxy_traffic(days: int = Query(7, ge=1, le=14)):
     summary = TRAFFIC.summary(days)
     cutoff = time.time() - days * 86400
+    since = datetime.fromtimestamp(cutoff, timezone.utc).date().isoformat()
+    summary["totals"]["stale_refusals"] = ledger.counter_total("stale_refusal", since)
     try:
         invoices, _ = snapshot()
     except HTTPException:
@@ -650,13 +671,57 @@ def proxy_traffic(days: int = Query(7, ge=1, le=14)):
 # ---------------------------------------------------------------------------
 # Agent manifest (public)
 # ---------------------------------------------------------------------------
+CONTACT = os.environ.get("AURAGRID_CONTACT", "").strip()   # owner-supplied; omitted when unset
+STARTED_AT = time.time()
+
+
+def _source_key(key: str) -> str:
+    """The fetched feed behind a key (a delayed/daily copy reads its source's snapshots)."""
+    return jobs.DERIVED.get(key, {}).get("source", key)
+
+
+def _freshness(key: str) -> dict:
+    """Age of the newest stored data behind an endpoint, against its stale limit."""
+    src = _source_key(key)
+    newest = STORE.latest_retrieved_at(src)
+    stale_after = jobs.LIMITS.get(key, (None,))[0]
+    age = round(time.time() - newest) if newest else None
+    return {"newest_data_retrieved_at": datetime.fromtimestamp(newest, timezone.utc).isoformat(timespec="seconds")
+            if newest else None,
+            "age_seconds": age, "stale_after_seconds": stale_after,
+            "stale": age is None or (stale_after is not None and age > stale_after)}
+
+
+def _update_interval(key: str):
+    derived = jobs.DERIVED.get(key, {})
+    if derived.get("daily"):
+        return 86400
+    job = JOBS.get(_source_key(key))
+    return job.interval if job else None
+
+
+def _usd(sats):
+    btc, _age, state = engine.btc_state()
+    return round(sats / 1e8 * btc, 4) if btc and sats is not None else None
+
+
 def _catalog_entries() -> list[dict]:
     entries = []
     for slug, name, tier, desc in OFFERED:
-        free = feed_key(slug) in ACCESS.free
+        key = feed_key(slug)
+        free = key in ACCESS.free
         entry = {"path": "/api/v1/" + slug, "name": name, "tier": tier, "description": desc,
                  "access": "free" if free else "paid", "auth": "none" if free else "L402",
-                 "status": "live" if feed_live(feed_key(slug)) else "coming_soon"}
+                 "status": "live" if feed_live(key) else "coming_soon",
+                 "method": "measured",
+                 "update_interval_seconds": _update_interval(key),
+                 "stale_after_seconds": jobs.LIMITS.get(key, (None,))[0],
+                 **{("source_" + k if k in ("url", "terms_url") else k): v
+                    for k, v in feeds.source_info(_source_key(key)).items()}}
+        derived = jobs.DERIVED.get(key)
+        if derived:
+            entry["copy_of"] = feed_path(derived["source"], BATCH_PREFIX)
+            entry["delay"] = "previous UTC day" if derived.get("daily") else "%d minutes" % (derived["delay"] // 60)
         if free:
             entry["rate_limit"] = "%d requests/minute per IP" % ACCESS.requests_per_minute
             entries.append(entry)
@@ -671,10 +736,15 @@ def _catalog_entries() -> list[dict]:
             entry["price_sats"] = quote["price_sats"]
             entry["pricing"] = quote["pricing"]
             if quote.get("degraded"):
-                entry["status"] = "degraded"   # stale or missing: served free until fresh
+                entry["status"] = "stale"   # past its limit: 503, no invoice, until fresh
             if "usd_price" in quote:
                 entry["usd_price"] = quote["usd_price"]
             entry["quote_url"] = "/api/v1/price/" + slug
+            if quote.get("token_ttl_seconds"):
+                entry["token_ttl_seconds"] = quote["token_ttl_seconds"]
+        entry["price_usd_approx"] = _usd(entry.get("price_sats"))
+        if sample_url(key):
+            entry["sample_url"] = sample_url(key)
         entries.append(entry)
     return entries
 
@@ -688,11 +758,129 @@ def _plan_entries() -> list[dict]:
         quote = engine.quote(plan.paths()[0])
         if quote:
             entry["price_sats"] = quote["price_sats"]
+            entry["price_usd_approx"] = _usd(quote["price_sats"])
             entry["quote_url"] = "/api/v1/price/" + plan.paths()[0][len("/api/v1/"):]
             if "usd_price" in quote:
                 entry["usd_price"] = quote["usd_price"]
+        entry["samples"] = [sample_url(f) for f in plan.feeds if sample_url(f)]
         entries.append(entry)
     return entries
+
+
+def _links(base: str) -> dict:
+    links = {"manifest": base + "/agent-manifest.json", "openapi": base + "/openapi.json",
+             "llms_txt": base + "/llms.txt", "l402_services": base + "/.well-known/l402-services",
+             "status": base + "/status.json", "terms": base + "/terms", "checkout": base + "/buy"}
+    return links
+
+
+def _status_payload() -> dict:
+    feeds_ = []
+    for e in _catalog_entries():
+        fr = _freshness(feed_key(e["path"][len("/api/v1/"):]))
+        feeds_.append({"path": e["path"], "name": e["name"], "access": e["access"], "status": e["status"],
+                       **fr, "update_interval_seconds": e["update_interval_seconds"]})
+    paid_stale = [f["path"] for f in feeds_ if f["access"] == "paid" and f["stale"]]
+    return {
+        "service": "AurAgrid",
+        "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "api_up_since": datetime.fromtimestamp(STARTED_AT, timezone.utc).isoformat(timespec="seconds"),
+        "api_uptime_seconds": round(time.time() - STARTED_AT),
+        "overall": "degraded" if paid_stale else "ok",
+        "paid_feeds_refusing_while_stale": paid_stale,
+        "feeds": feeds_,
+        "note": "Free feeds are served marked stale; paid feeds past their limit answer 503 and issue no invoice.",
+    }
+
+
+_status_cache = {"t": 0.0, "v": None}
+STATUS_TTL_SECONDS = 15.0
+
+
+def _status_cached() -> dict:
+    """Public status, recomputed at most every 15 s (it reads every feed's newest snapshot)."""
+    if _status_cache["v"] is None or time.monotonic() - _status_cache["t"] > STATUS_TTL_SECONDS:
+        _status_cache["v"], _status_cache["t"] = _status_payload(), time.monotonic()
+    return _status_cache["v"]
+
+
+@app.get("/status.json")
+def status_json():
+    """Freshness of every feed and the API's uptime (honest, computed at most every 15 s)."""
+    return JSONResponse(_status_cached(), headers={"Cache-Control": "no-store"})
+
+
+@app.get("/status", response_class=HTMLResponse, include_in_schema=False)
+def status_page():
+    st = _status_cached()
+    esc = lambda v: str(v).replace("&", "&amp;").replace("<", "&lt;")   # noqa: E731
+    def age(sec):
+        return "never" if sec is None else ("%dm" % (sec // 60) if sec < 5400 else "%.1fh" % (sec / 3600))
+    rows = "".join(
+        "<tr><td><code>%s</code></td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
+            esc(f["path"]), esc(f["access"]), "stale" if f["stale"] else "fresh", age(f["age_seconds"]),
+            age(f["stale_after_seconds"]))
+        for f in st["feeds"])
+    html = ("<!DOCTYPE html><html lang=en><head><meta charset=utf-8><meta name=viewport content='width=device-width,"
+            "initial-scale=1'><title>AurAgrid status</title><style>body{font:15px system-ui,sans-serif;margin:24px;"
+            "max-width:860px}table{border-collapse:collapse;width:100%%}td,th{text-align:left;padding:6px 8px;"
+            "border-bottom:1px solid #ddd}code{font-size:13px}</style></head><body><h1>AurAgrid status</h1>"
+            "<p>Overall: <b>%s</b> &middot; API up since %s &middot; checked %s UTC</p>"
+            "<table><tr><th>Endpoint</th><th>Access</th><th>Data</th><th>Newest data age</th><th>Stale after</th></tr>"
+            "%s</table><p>%s</p><p>Machine-readable: <a href=/status.json>/status.json</a> &middot; "
+            "<a href=/agent-manifest.json>manifest</a> &middot; <a href=/openapi.json>OpenAPI</a></p></body></html>"
+            ) % (esc(st["overall"]), esc(st["api_up_since"]), esc(st["checked_at"]), rows, esc(st["note"]))
+    return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
+
+ROBOTS_TXT = """# AurAgrid: discovery files and docs are open to crawlers. Data endpoints are for API
+# clients, not crawlers (paid ones answer 402 and would only create unpaid invoices).
+User-agent: *
+Allow: /llms.txt
+Allow: /agent-manifest.json
+Allow: /openapi.json
+Allow: /.well-known/
+Allow: /status
+Allow: /terms
+Allow: /api/v1/price/
+Disallow: /api/v1/
+"""
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
+def robots_txt():
+    return ROBOTS_TXT
+
+
+@app.get("/.well-known/l402-services", include_in_schema=False)
+def l402_services(request: Request):
+    """Seller discovery document read by 402 Index (no published schema; fields are self-describing)."""
+    base = PUBLIC_URL or str(request.base_url).rstrip("/")
+    services = []
+    for e in _catalog_entries():
+        if e["access"] != "paid":
+            continue
+        services.append({"url": base + e["path"], "method": "GET", "protocol": "L402", "name": e["name"],
+                         "description": e["description"], "price_sats": e.get("price_sats"),
+                         "price_usd": e.get("usd_price", e.get("price_usd_approx")),
+                         "token_ttl_seconds": e.get("token_ttl_seconds"), "category": "data",
+                         "request_schema": None,   # GET with no body or parameters
+                         "quote_url": base + e["quote_url"] if e.get("quote_url") else None,
+                         "sample_url": base + e["sample_url"] if e.get("sample_url") else None,
+                         "status": e["status"]})
+    for p in _plan_entries():
+        for path in p["paths"]:
+            services.append({"url": base + path, "method": "GET", "protocol": "L402", "name": p["title"],
+                             "description": "%d-day token for: %s" % (p["token_ttl_seconds"] // 86400,
+                                                                      ", ".join(p["paths"])),
+                             "price_sats": p.get("price_sats"), "price_usd": p.get("price_usd_approx"),
+                             "token_ttl_seconds": p["token_ttl_seconds"], "category": "data",
+                             "request_schema": None, "samples": [base + x for x in p["samples"]]})
+    doc = {"provider": "AurAgrid", "services": services, "links": _links(base),
+           "signing_pubkey": SIGNING_PUBKEY if SIGNING_ENABLED else None}
+    if CONTACT:
+        doc["contact"] = CONTACT
+    return doc
 
 
 @app.get("/.well-known/ai-plugin.json")
@@ -729,7 +917,9 @@ async def get_agent_manifest(request: Request):
             "accept an invoice within the quote's tolerance_pct. A paid token stays valid for the "
             "endpoint's token_ttl_seconds, so reuse it instead of paying again. For repeated use, "
             "a plan (30-day pass or multi-feed bundle) sells one token that opens its paths for "
-            "token_ttl_seconds. Paid feeds have free delayed copies (btc-fees-delayed, ln-network-daily)."
+            "token_ttl_seconds. Every paid endpoint has a free sample (sample_url: its delayed or daily "
+            "copy, real data with its true as_of). A paid endpoint whose data is past its stale limit "
+            "answers 503 with stale=true and its as_of, and issues no invoice; check status_url first."
             % len(OFFERED)
             + (" Successful /api/v1/ data responses carry X-AurAgrid-Signature-V2 and X-AurAgrid-Timestamp "
                "headers (send a random X-AurAgrid-Nonce to bind the signature to your request); verify them "
@@ -738,6 +928,9 @@ async def get_agent_manifest(request: Request):
         ),
         "api": {"type": "openapi", "url": base + "/openapi.json"},
         "terms_url": base + "/terms",
+        "status_url": base + "/status.json",
+        "links": _links(base),
+        **({"contact": CONTACT} if CONTACT else {}),
         "endpoints_count": len(OFFERED),
         "endpoints": _catalog_entries(),
         "plans": _plan_entries(),
@@ -755,6 +948,12 @@ def get_endpoint_quote(slug: str):
         raise HTTPException(status_code=404, detail="Endpoint not priced")
     plan = PLAN_ROUTER.plan_for_path("/api/v1/" + slug)
     quote["plan"] = plan.kind if plan else HOURLY
+    sample = sample_url(engine.feed_key("/api/v1/" + slug))
+    if sample:
+        quote["sample_url"] = sample
+    if quote.get("degraded"):
+        quote["note"] = ("This feed's data is past its freshness limit: requests return 503 with no invoice "
+                         "until fresh data arrives. The free sample stays available.")
     return quote
 
 
@@ -779,8 +978,22 @@ def retired_prefixes(request: Request, slug: str):
 # Paid feeds. Aperture sells and checks the token; passes and bundles arrive
 # here rewritten by PlanRewriteMiddleware. Data comes from feeds.py providers.
 # ---------------------------------------------------------------------------
+def _stale_refusal(key: str, as_of):
+    """503 for a paid feed past its freshness limit: no data, no charge."""
+    if as_of is None:
+        snap = STORE.latest(key)
+        as_of = snap.as_of if snap else None
+    ledger.bump("stale_refusal", datetime.now(timezone.utc).date().isoformat())
+    body = {"detail": "Data is past its freshness limit; not served and not charged until fresh data arrives.",
+            "feed": key, "stale": True, "as_of": as_of,
+            "stale_after_seconds": jobs.LIMITS.get(key, (None,))[0], "sample_url": sample_url(key),
+            "status_url": "/status.json"}
+    return JSONResponse(body, status_code=503, headers={"Retry-After": "300", "Cache-Control": "no-store"})
+
+
 def _feed_handler(slug: str):
     key = normalize_path("/api/v1/" + slug)
+    paid = key in ACCESS.paid
 
     def handler(request: Request):
         try:
@@ -789,19 +1002,24 @@ def _feed_handler(slug: str):
             log.error("Paid request for %s, but no provider is registered in feeds.py", key)
             raise HTTPException(status_code=503, detail="Feed not connected")
         except feeds.FeedWarmingUp:
+            if paid:
+                return _stale_refusal(key, None)
             raise HTTPException(status_code=503, detail="Feed warming up", headers={"Retry-After": "300"})
         except Exception:
             log.exception("Provider for %s failed", key)
             raise HTTPException(status_code=502, detail="Feed temporarily unavailable")
         data = dict(data)
         retrieved_at, stale = data.pop("fetched_at", None), bool(data.pop("stale", False))
+        if paid and stale:
+            # Never take payment for stale data: the pricer quotes 0 sats while a paid feed
+            # is degraded, so Aperture issues no invoice, and the request ends here.
+            return _stale_refusal(key, feeds.provenance(key, data, retrieved_at).get("as_of"))
         return {
             "feed": key,
             "plan": getattr(request.state, "auragrid_plan_kind", HOURLY),
             "served_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "stale": stale,
-            # Paid feeds are never charged for while stale: the pricer quotes 0 sats.
-            "degraded": stale,
+            "degraded": stale,   # only free feeds can be served stale; paid ones answer 503
             "provenance": feeds.provenance(key, data, retrieved_at),
             "data": data,
         }
@@ -809,11 +1027,44 @@ def _feed_handler(slug: str):
     return handler
 
 
+class Provenance(BaseModel):
+    source: Optional[str] = None
+    url: Optional[str] = None
+    terms_url: Optional[str] = None
+    attribution: Optional[str] = None
+    retrieved_at: Optional[str] = Field(None, description="When AurAgrid fetched this data (ISO 8601, UTC)")
+    as_of: Optional[str] = Field(None, description="The data's own timestamp, as published by the source")
+
+
+class FeedResponse(BaseModel):
+    feed: str
+    plan: str = Field(description="hourly, pass_30d or bundle: the token type that was used")
+    served_at: str
+    stale: bool = Field(description="True when the data is older than the feed's stale limit (free feeds only)")
+    degraded: bool
+    provenance: Optional[Provenance] = None
+    data: dict = Field(description="The feed's payload; its fields are documented by each source")
+
+
+class StaleRefusal(BaseModel):
+    detail: str
+    feed: str
+    stale: bool = True
+    as_of: Optional[str] = None
+    stale_after_seconds: Optional[int] = None
+    sample_url: Optional[str] = None
+    status_url: str
+
+
 for _slug, _name, _tier, _desc in OFFERED:
     _free = feed_key(_slug) in ACCESS.free
+    _responses = {200: {"model": FeedResponse}, 503: {"description": "No data yet (warming up)"}}
+    if not _free:
+        _responses[503] = {"model": StaleRefusal,
+                           "description": "Data past its stale limit: not served, no invoice issued"}
     app.add_api_route("/api/v1/" + _slug, _feed_handler(_slug), methods=["GET"], name=_slug, summary=_name,
                       description=_desc + (" Free, rate-limited per IP." if _free else " Requires L402."),
-                      tags=["free" if _free else "paid"],
+                      tags=["free" if _free else "paid"], responses=_responses,
                       dependencies=[] if _free else [Depends(require_gateway)])
 def _retired_route(request: Request):
     return _gone(request.url.path)
@@ -865,13 +1116,42 @@ def llms_txt(request: Request):
              "Free endpoints need no key; premium endpoints are paid per use over L402 (Lightning).", "",
              "- Manifest: %s/agent-manifest.json" % base,
              "- OpenAPI: %s/openapi.json" % base,
+             "- L402 services: %s/.well-known/l402-services" % base,
+             "- Status (feed freshness, uptime): %s/status.json" % base,
              "- Terms: %s/terms" % base]
-    for title, keys in (("Free endpoints (rate-limited per IP)", ACCESS.free), ("Paid endpoints (L402)", ACCESS.paid)):
-        rows = [(slug, name) for slug, name, _, _ in OFFERED if feed_key(slug) in keys]
-        if rows:
-            lines += ["", "## " + title]
-            lines += ["- %s: %s/api/v1/%s%s" % (name, base, slug, "" if feed_live(feed_key(slug)) else " (coming soon)")
-                      for slug, name in rows]
+    if CONTACT:
+        lines.append("- Contact: %s" % CONTACT)
+    if SIGNING_ENABLED and SIGNING_PUBKEY:
+        lines.append("- Responses are signed (X-AurAgrid-Signature-V2) by node key %s; see the manifest's "
+                     "`signature` block" % SIGNING_PUBKEY)
+
+    def every(sec):
+        if sec is None:
+            return "?"
+        return "%d min" % (sec // 60) if sec < 3600 else ("%d h" % (sec // 3600) if sec < 86400 else "%d day" % (sec // 86400))
+
+    entries = _catalog_entries()
+    for title, access in (("Free endpoints (rate-limited per IP)", "free"), ("Paid endpoints (L402)", "paid")):
+        rows = [e for e in entries if e["access"] == access]
+        if not rows:
+            continue
+        lines += ["", "## " + title]
+        for e in rows:
+            bits = ["source: %s" % e.get("source", "?"), "updates every %s" % every(e["update_interval_seconds"])]
+            if e.get("license"):
+                bits.append("licence: %s" % e["license"])
+            if access == "paid":
+                price = "%s sats" % e.get("price_sats")
+                if e.get("price_usd_approx") is not None:
+                    price += " (~$%.4f)" % e["price_usd_approx"]
+                if e.get("token_ttl_seconds"):
+                    price += " per %s token" % every(e["token_ttl_seconds"])
+                bits.insert(0, price)
+                if e.get("sample_url"):
+                    bits.append("free sample: %s%s" % (base, e["sample_url"]))
+            if e["status"] != "live":
+                bits.append("status: %s" % e["status"])
+            lines.append("- %s: %s%s (%s)" % (e["name"], base, e["path"], "; ".join(bits)))
     if PLANS:
         lines += ["", "## Passes", "- Checkout: %s/buy" % base]
         lines += ["- %s: %s (token valid %d days)" % (p.display_name(), ", ".join(p.paths()), p.timeout // 86400)
@@ -989,7 +1269,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                     <button data-days="14" class="px-2.5 py-1 rounded border border-slate-700 text-slate-400">14d</button>
                 </div>
             </div>
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="traffic-kpis"></div>
+            <div class="grid grid-cols-2 lg:grid-cols-3 gap-4" id="traffic-kpis"></div>
 
             <div>
                 <div class="text-xs text-slate-400 mb-1">Paywall funnel</div>
@@ -1042,7 +1322,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 <div class="text-3xl font-black text-white mt-1"><span id="stat-revenue">--</span> <span class="text-sm font-medium text-slate-500">sats</span></div>
             </div>
             <div class="glass-card p-6 rounded-2xl">
-                <div class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center"><i class="fas fa-file-invoice mr-2 text-slate-500"></i>Invoices Issued</div>
+                <div class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center"><i class="fas fa-file-invoice mr-2 text-slate-500"></i>Invoices Issued (all time)</div>
                 <div id="stat-count" class="text-3xl font-black text-white mt-1">--</div>
             </div>
             <div class="glass-card p-6 rounded-2xl">
@@ -1420,6 +1700,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 tile("Discovery hits", num(T.discovery), "manifest, llms.txt, openapi, /buy"),
                 tile("Real clients", num(t.clients.real), "distinct IPs, excluding scanners"),
                 tile("Scanner noise", num(T.noise), num(t.clients.noise) + " IPs probing other paths", "text-slate-400"),
+                tile("Free sample hits", num(T.sample_hits), "delayed/daily copies of the paid feeds"),
+                tile("Stale refusals", num(T.stale_refusals), "paid requests answered 503, not charged",
+                     T.stale_refusals ? "text-amber-300" : "text-white"),
             );
 
             const f = t.funnel, fun = $("funnel");
@@ -1494,3 +1777,67 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 @app.get("/", response_class=HTMLResponse, dependencies=[Depends(require_admin)], include_in_schema=False)
 def serve_dashboard():
     return DASHBOARD_HTML
+
+
+# ---------------------------------------------------------------------------
+# OpenAPI: generated from the live routes, plus L402 details with live prices
+# ---------------------------------------------------------------------------
+L402_FLOW = ("L402 payment required. The WWW-Authenticate header carries a macaroon and a BOLT11 invoice "
+             "(`L402 macaroon=\"...\", invoice=\"lnbc...\"`). Pay the invoice with a Lightning wallet, then "
+             "repeat the request with `Authorization: L402 <macaroon>:<preimage-hex>`. The token is valid for "
+             "x-l402.token_ttl_seconds; reuse it instead of paying again. Check x-l402.quote_url first: an "
+             "invoice should be within the quote's tolerance_pct. A free sample is at x-l402.sample_url.")
+
+
+def _l402_ext(path: str) -> dict:
+    q = engine.quote(path) or {}
+    ext = {"price_sats": q.get("price_sats"), "price_usd_approx": _usd(q.get("price_sats")),
+           "pricing": q.get("pricing"), "token_ttl_seconds": q.get("token_ttl_seconds"),
+           "quote_url": "/api/v1/price/" + path[len("/api/v1/"):]}
+    if q.get("usd_price") is not None:
+        ext["usd_price"] = q["usd_price"]
+    sample = sample_url(engine.feed_key(path))
+    if sample:
+        ext["sample_url"] = sample
+    return ext
+
+
+def custom_openapi():
+    spec = get_openapi(title="AurAgrid data oracle", version="1.0.0", routes=app.routes,
+                       description=("Bitcoin fee and Lightning network data from AurAgrid's own nodes (paid, L402) "
+                                    "and U.S. public-domain feeds (EIA, NOAA, USGS; free). Every data response "
+                                    "carries provenance and an LND-signed X-AurAgrid-Signature-V2. Feed freshness: "
+                                    "/status.json. Machine manifest: /agent-manifest.json."))
+    if PUBLIC_URL:
+        spec["servers"] = [{"url": PUBLIC_URL}]
+    spec.setdefault("components", {}).setdefault("securitySchemes", {})["L402"] = {
+        "type": "apiKey", "in": "header", "name": "Authorization",
+        "description": "`L402 <macaroon>:<preimage>` obtained by paying the 402 challenge's invoice"}
+    paths = spec.setdefault("paths", {})
+    feed_get = {}
+    for slug, *_ in PAID_CATALOG:
+        path = "/api/v1/" + slug
+        op = paths.get(path, {}).get("get")
+        if not op:
+            continue
+        feed_get[feed_key(slug)] = op
+        op["security"] = [{"L402": []}]
+        op["responses"]["402"] = {"description": L402_FLOW,
+                                  "headers": {"WWW-Authenticate": {"schema": {"type": "string"},
+                                                                   "description": "L402 challenge"}}}
+        op["x-l402"] = _l402_ext(path)
+    for plan in PLANS:   # plan paths are served by middleware, so they are not in app.routes
+        for feed, path in zip(plan.feeds, plan.paths()):
+            base_op = feed_get.get(feed)
+            if base_op is None:
+                continue
+            op = json.loads(json.dumps(base_op))
+            op["operationId"] = "%s_%s" % (plan.name.replace("-", "_"), feed.replace("-", "_").replace("/", "_"))
+            op["summary"] = "%s (%s)" % (plan.display_name(), feed)
+            op["tags"] = ["paid", "plans"]
+            op["x-l402"] = _l402_ext(path)
+            paths[path] = {"get": op}
+    return spec
+
+
+app.openapi = custom_openapi

@@ -134,6 +134,7 @@ feeds.describe(
     "energy/grid", source="U.S. Energy Information Administration (EIA), Hourly Electric Grid Monitor (EIA-930)",
     url="https://api.eia.gov/v2/electricity/rto/", terms_url="https://www.eia.gov/about/copyrights_reuse.php",
     attribution="Source: U.S. Energy Information Administration. Public domain; EIA does not endorse AurAgrid.",
+    license='U.S. government work, public domain; credit the U.S. Energy Information Administration',
     as_of=lambda snap: (snap.get("lower48") or {}).get("period_utc") or max(r["period_utc"] for r in snap["regions"]))
 
 
