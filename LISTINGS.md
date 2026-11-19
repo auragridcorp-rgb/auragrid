@@ -9,7 +9,7 @@ truthful text from verified facts, nothing posted to communities without Joshua'
 | [satring.com](https://satring.com/services/auragrid-bitcoin-fees-lightning-network-data) | `btc-fees` (+ ln-network, bundle in the text) | listed 2026-11-11, text and price updated 2026-11-19 | **Live** | `PATCH` / `DELETE https://satring.com/api/v1/services/auragrid-bitcoin-fees-lightning-network-data` with header `X-Edit-Token: $(cat ~/.auragrid/satring_edit_token)`; free |
 | [402 Index](https://402index.io) | `btc-fees` (id `22131ab3-de4b-42c2-b58e-f1f5852ca889`) | 2026-11-19 | **Pending review** (L402 challenge verified) | Edit/delete needs a domain claim, which rejects bare IPs: email hello@402index.io |
 | [402 Index](https://402index.io) | `ln-network` (id `ad2d6d6e-ea85-4e8b-8267-b3fc3e107c06`) | 2026-11-19 | **Pending review** (L402 challenge verified) | As above |
-| [L402 Apps](https://www.l402apps.com) | `btc-fees`, `ln-network` | — | **Blocked: Joshua** | Their API requires a payout target for its 10-sat submission reward: a 10-sat invoice from our node (receiving only) or a Lightning address. Creating invoices on the node was not allowed without your approval |
+| [L402 Apps](https://www.l402apps.com) | `btc-fees`, `ln-network` | tried 2026-11-19 | **Retry later: their side** | `POST /api/api-submissions` {url, invoice, description}. Joshua approved 10-sat receive-only invoices. Every valid invoice was rejected ("Could not decode your Lightning invoice"), and their own `/api/apis` answered "Failed to create Lightning invoice" at the same time, so their Lightning backend looks down. Retry with a fresh invoice (the old ones expire unpaid, harmlessly) |
 | Official MCP Registry | `io.github.auragridcorp-rgb/auragrid` | — | **Blocked: Joshua** | Needs `auragrid-mcp` 0.3.0 on PyPI, the repo public and `mcp-publisher login github` as you: `auragrid_mcp/PUBLISHING.md` |
 | PulseMCP | — | — | Automatic | Copies the Official MCP Registry (its own submissions are paused) |
 | Glama | — | — | After the awesome-mcp-servers PR | Syncs with punkpeye/awesome-mcp-servers; or "Add Server" with your login |
@@ -54,8 +54,9 @@ truthful text from verified facts, nothing posted to communities without Joshua'
 > Free previous-day sample: /api/v1/batch/ln-network-daily. Signed responses with provenance;
 > stale data returns 503 and is never charged.
 
-No contact address was submitted anywhere: it is optional, and the prompt says to use the one
-Joshua gives.
+Contact: Joshua gave auragridcorp@gmail.com on 2026-11-19 (`AURAGRID_CONTACT` in ~/.bashrc); it
+appears in the manifest, llms.txt and OpenAPI `info.contact`. Listings submitted before that
+date have none.
 
 ## Drafts (not submitted)
 

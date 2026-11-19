@@ -20,7 +20,8 @@ Everything is built and tested; these steps need Joshua's accounts. All are free
 
 3. **Official MCP Registry** (GitHub login as auragridcorp-rgb, device flow):
 
-       # install mcp-publisher v1.8.9 (checksum-verified)
+       # mcp-publisher v1.8.9 is already installed in ~/.local/bin (checksum-verified 2026-11-19;
+       # `mcp-publisher validate` passes). To reinstall:
        cd /tmp && B=https://github.com/modelcontextprotocol/registry/releases/download/v1.8.9
        curl -sLO $B/mcp-publisher_linux_arm64.tar.gz && curl -sLO $B/registry_1.8.9_checksums.txt
        grep 'mcp-publisher_linux_arm64.tar.gz$' registry_1.8.9_checksums.txt | sha256sum -c -
