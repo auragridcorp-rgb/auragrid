@@ -11,6 +11,7 @@ import argparse
 import json
 import socket
 import sys
+import time
 from datetime import datetime, timezone
 
 import requests
@@ -32,17 +33,14 @@ def check_paid(base, path, label):
     r = get(base, path)
     header = r.headers.get("WWW-Authenticate", "")
     if r.status_code == 200:
-        # A degraded (stale or missing) paid feed is deliberately free until it recovers.
-        try:
-            quote = get(base, "/api/v1/price/" + path[len("/api/v1/"):]).json()
-        except Exception:
-            quote = {}
-        if quote.get("degraded"):
-            record("WARN", label, "served free: the feed is degraded (stale), check the fetcher")
-        else:
-            record("FAIL", label, "returned 200 WITHOUT payment: the paywall is bypassed")
+        record("FAIL", label, "returned 200 WITHOUT payment: the paywall is bypassed")
     elif r.status_code == 402 and "invoice=" in header and "macaroon=" in header:
         record("PASS", label, "402 with invoice + macaroon")
+    elif r.status_code == 503 and _json(r).get("stale"):
+        record("WARN", label, "stale: answers 503 and issues no invoice (as_of %s); check the fetcher"
+               % _json(r).get("as_of"))
+    elif r.status_code == 429:
+        record("WARN", label, "rate limited (429); re-run in a minute")
     else:
         record("FAIL", label, "expected 402 with an L402 challenge, got HTTP %d" % r.status_code)
 
@@ -76,18 +74,35 @@ def check_signing(base, manifest):
         record("FAIL", "signing", str(exc))
 
 
+EXAMPLE_PARAMS = {"lat": "29.5", "lon": "-90", "radius_km": "500"}   # for endpoints that take parameters
+PACE_SECONDS = 2.1   # stay under the free tier's 30 requests/minute per IP
+
+
+def _json(r):
+    try:
+        return r.json()
+    except ValueError:
+        return {}
+
+
 def check_offer(base, manifest):
     """Every advertised endpoint behaves as its manifest entry says."""
     for e in manifest.get("endpoints", []):
         path, label = e["path"], e["path"].rsplit("/", 1)[-1]
+        time.sleep(PACE_SECONDS)
         if e.get("access") == "paid":
             check_paid(base, path, "paywall " + label)
             continue
-        r = get(base, path)
+        params = {k: EXAMPLE_PARAMS.get(k, "") for k in (e.get("parameters") or {})}
+        r = get(base, path, params=params or None)
         if r.status_code == 402:
             record("FAIL", "free " + label, "free endpoint asks for payment")
-        elif e.get("status") == "live":
-            record("PASS" if r.status_code == 200 else "FAIL", "free " + label, "HTTP %d" % r.status_code)
+        elif r.status_code == 429:
+            record("WARN", "free " + label, "rate limited (429); re-run in a minute")
+        elif e.get("status") in ("live", "preview"):
+            ok = r.status_code == 200 or (r.status_code == 503 and _json(r).get("stale"))
+            record("PASS" if r.status_code == 200 else ("WARN" if ok else "FAIL"), "free " + label,
+                   "HTTP %d%s" % (r.status_code, " (an input is stale)" if r.status_code == 503 else ""))
         else:
             record("PASS" if r.status_code == 503 else "WARN", "free " + label,
                    "coming soon, HTTP %d" % r.status_code)
@@ -119,7 +134,8 @@ def check_quotes(base, manifest):
 
 
 def check_discovery(base):
-    for path in ["/agent-manifest.json", "/.well-known/ai-plugin.json", "/openapi.json", "/llms.txt", "/buy", "/terms"]:
+    for path in ["/agent-manifest.json", "/.well-known/ai-plugin.json", "/openapi.json", "/llms.txt", "/buy", "/terms",
+                 "/robots.txt", "/status", "/status.json", "/.well-known/l402-services"]:
         r = get(base, path)
         record("PASS" if r.status_code == 200 else ("WARN" if path == "/llms.txt" else "FAIL"), "public " + path,
                "HTTP %d" % r.status_code)
