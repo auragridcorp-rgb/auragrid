@@ -64,7 +64,9 @@ date have none.
 **punkpeye/awesome-mcp-servers**, section "Finance & Fintech" (one line, alphabetical; PR title
 ends with 🤖🤖🤖 because an agent prepared it):
 
-    - [auragridcorp-rgb/auragrid](https://github.com/auragridcorp-rgb/auragrid) 🐍 ☁️ - Bitcoin fee and Lightning network data from AurAgrid's own nodes (L402, free delayed samples) and free U.S. EIA, USGS and NOAA feeds; responses signed by the node key.
+```markdown
+- [auragridcorp-rgb/auragrid](https://github.com/auragridcorp-rgb/auragrid) 🐍 ☁️ - Bitcoin fee and Lightning network data from AurAgrid's own nodes (L402, free delayed samples) and free U.S. EIA, USGS and NOAA feeds; responses signed by the node key.
+```
 
 **Stacker News / Nostr** (only if you approve posting it, from your own account):
 
