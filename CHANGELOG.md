@@ -22,6 +22,10 @@ current state: `PROJECT_STATE.md`). Newest first.
   Lightning Routing Liquidity" service removed, stale-refusal and sample-hit counters.
 - **Listings:** 402 Index (2 endpoints, pending review); satring text updated.
   `LISTINGS.md`, `X402_PLAN.md` (decision pending).
+- **Owner-delegated decisions:** hourly USD prices kept; derived endpoints stay free
+  previews until the 90-day review (2027-02-17), since free calls are what get an
+  unknown service tried; the EIA-based ones stay free regardless until EIA's
+  commercial terms are confirmed. `auragrid-mcp` 0.3.0 built and checked for upload.
 
 ## 2026-11-11: Phase 4 (autonomous operations) and Phase 6 (report)
 
