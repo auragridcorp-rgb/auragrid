@@ -1919,6 +1919,8 @@ def custom_openapi():
                                     "/status.json. Machine manifest: /agent-manifest.json."))
     if PUBLIC_URL:
         spec["servers"] = [{"url": PUBLIC_URL}]
+    if CONTACT:
+        spec["info"]["contact"] = {"email": CONTACT} if "@" in CONTACT else {"url": CONTACT}
     spec.setdefault("components", {}).setdefault("securitySchemes", {})["L402"] = {
         "type": "apiKey", "in": "header", "name": "Authorization",
         "description": "`L402 <macaroon>:<preimage>` obtained by paying the 402 challenge's invoice"}
