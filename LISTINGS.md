@@ -11,7 +11,7 @@ truthful text from verified facts, nothing posted to communities without Joshua'
 | [402 Index](https://402index.io) | `ln-network` (id `ad2d6d6e-ea85-4e8b-8267-b3fc3e107c06`) | 2026-11-19 | **Pending review** (L402 challenge verified) | As above |
 | [L402 Apps](https://www.l402apps.com) | `btc-fees`, `ln-network` | tried 2026-11-19 | **Retry later: their side** | `POST /api/api-submissions` {url, invoice, description}. Joshua approved 10-sat receive-only invoices. Every valid invoice was rejected ("Could not decode your Lightning invoice"), and their own `/api/apis` answered "Failed to create Lightning invoice" at the same time, so their Lightning backend looks down. Retry with a fresh invoice (the old ones expire unpaid, harmlessly) |
 | [PyPI](https://pypi.org/project/auragrid-mcp/0.3.0/) | `auragrid-mcp` 0.3.0 | 2026-11-19 | **Live** | Project-scoped token (Joshua); yank a release from the PyPI project page |
-| Official MCP Registry | `io.github.auragridcorp-rgb/auragrid` | — | **Next: Joshua** | Repo public, then `mcp-publisher login github` + `publish` as you: `auragrid_mcp/PUBLISHING.md` |
+| [Official MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.auragridcorp-rgb/auragrid) | `io.github.auragridcorp-rgb/auragrid` 0.3.0 | 2026-11-19 | **Live** | `mcp-publisher publish` with a new version in server.json (login: GitHub device flow as auragridcorp-rgb); status changes via `mcp-publisher status` |
 | PulseMCP | — | — | Automatic | Copies the Official MCP Registry (its own submissions are paused) |
 | Glama | — | — | After the awesome-mcp-servers PR | Syncs with punkpeye/awesome-mcp-servers; or "Add Server" with your login |
 | Smithery | — | — | Not possible | Stopped accepting listings (now part of Arcade) |
