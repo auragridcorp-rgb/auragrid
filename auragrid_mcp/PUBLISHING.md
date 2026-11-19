@@ -4,20 +4,27 @@ Everything is built and tested; these steps need Joshua's accounts. All are free
 
 1. **PyPI** (needs a project-scoped API token for `auragrid-mcp`; the old tokens were revoked):
 
+   Already built and checked (`twine check` PASSED, clean-venv install tested 2026-11-19):
+   `dist/auragrid_mcp-0.3.0-py3-none-any.whl` and `dist/auragrid_mcp-0.3.0.tar.gz`.
+
        cd ~/AurAgrid/auragrid_mcp
-       rm -rf dist build && python -m pip install --upgrade build twine
-       python -m build
-       python -m twine upload dist/auragrid_mcp-0.3.0*      # username __token__, password = the token
+       python3 -m pip install --user twine
+       python3 -m twine upload dist/auragrid_mcp-0.3.0*     # username __token__, password = the token
 
    Check: `uvx auragrid-mcp --help` on any machine.
 
 2. **Make the repo public** (the registry entry and awesome-lists link to it):
    GitHub -> auragridcorp-rgb/auragrid -> Settings -> Change visibility -> Public.
-   History was purged and scanned clean on 2026-11-11.
+   History was purged on 2026-11-11 and re-scanned clean on 2026-11-19 (all 51 commits: no
+   macaroons, private keys, nsec, API keys, tokens or the dashboard password).
 
 3. **Official MCP Registry** (GitHub login as auragridcorp-rgb, device flow):
 
-       # install mcp-publisher: https://github.com/modelcontextprotocol/registry/releases
+       # install mcp-publisher v1.8.9 (checksum-verified)
+       cd /tmp && B=https://github.com/modelcontextprotocol/registry/releases/download/v1.8.9
+       curl -sLO $B/mcp-publisher_linux_arm64.tar.gz && curl -sLO $B/registry_1.8.9_checksums.txt
+       grep 'mcp-publisher_linux_arm64.tar.gz$' registry_1.8.9_checksums.txt | sha256sum -c -
+       tar xzf mcp-publisher_linux_arm64.tar.gz mcp-publisher && install -m 755 mcp-publisher ~/.local/bin/
        cd ~/AurAgrid/auragrid_mcp
        mcp-publisher login github          # open the printed URL, enter the code
        mcp-publisher publish               # reads server.json
