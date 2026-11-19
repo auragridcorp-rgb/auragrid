@@ -1,6 +1,6 @@
 # AurAgrid project state
 
-Last verified on the server: 2026-11-11. Read this, then `RESEARCH.md` (the
+Last verified on the server: 2026-11-19. Read this, then `RESEARCH.md` (the
 Phase 1 plan and source licensing) and `deploy/README.md`, before changing anything.
 
 AurAgrid is a small L402 data oracle at **https://84.12.79.124**. It sells two
@@ -51,6 +51,7 @@ feed is never charged for while it is stale (see Degraded feeds).
 | `auragrid-cert-renew.timer` | Twice daily; renews the certificate when due (see HTTPS) | :80 during renewal only |
 | `bitcoind` | Pruned mainnet node (`prune=10000`); chain backend for LND and source for `btc-fees`. `bitcoind.service` (since the 2026-11-11 reboot) | local RPC |
 | `lnd` | Mainnet LND (`~/.lnd`); REST 127.0.0.1:8081, gRPC 127.0.0.1:10009; source for `ln-network`, issues L402 invoices, signs responses | local |
+| `auragrid-selfcheck.timer` | Weekly read-only self-check (`selfcheck.py`); sandboxed, no access to wallets or secrets | - |
 | `auragrid-dvm` | `dvm/nip90_worker.py` (NIP-90 DVM), `Restart=always`, read-only sandbox, appends to `logs/dvm.log`. Relays: relay.damus.io, nos.lol, relay.primal.net. Replaced the tmux session on 2026-11-11 | - |
 
 Logs: `deploy/logrotate/auragrid` (installed in `/etc/logrotate.d/`) rotates
@@ -67,16 +68,31 @@ quote / discovery / scanner noise, with a paywall funnel joined to LND
 invoices), then revenue. Data: `/api/proxy/health`, `/api/proxy/traffic`
 (`ops_monitor.py`), `/api/proxy/stats`.
 
-## Degraded feeds (no charge for stale data)
+## Stale gate (never take payment for stale data)
 
-`jobs.feed_degraded()`: a feed is degraded when its last successful fetch is
-older than its `stale_after` (`jobs.LIMITS`) or it has never been fetched. The
-pricer then quotes 0 sats for the feed's hourly path, so Aperture serves it
-without payment; the quote and manifest say `degraded`, and the response has
-`"degraded": true` with the true `as_of`. It flips back automatically when the
-fetcher stores fresh data. The 30-day bundle keeps its static price (Aperture
-scopes dynamically priced tokens to one path, which would break a bundle). If
-the freshness check fails, the pricer charges normally.
+`jobs.feed_degraded()`: a feed is stale when its newest stored snapshot is older
+than its `stale_after` (`jobs.LIMITS`) or there is none. For a paid feed the
+pricer then quotes 0 sats, so Aperture issues **no invoice** and passes the
+request on, and the backend answers **503** with `stale: true`, the true
+`as_of` and the free `sample_url` (also for token holders and bundle paths).
+Refusals are counted in `ledger.db` (`counters`, shown on the dashboard). It
+reverts automatically when fresh data is stored. Free feeds are served marked
+`stale`. The 30-day bundle keeps a static price (Aperture scopes dynamically
+priced tokens to one path), so a bundle bought while a feed is stale is not
+refused at purchase, only its stale requests. (Before 2026-11-19 stale paid
+data was served free instead.)
+
+## Discovery files (all generated from the live routes)
+
+`/agent-manifest.json` (+ `/.well-known/ai-plugin.json`), `/openapi.json` (3.1,
+with `x-l402` live prices, the 402 flow and the 503 stale refusal),
+`/llms.txt`, `/.well-known/l402-services` (the seller file 402 Index reads),
+`/status` and `/status.json` (freshness of every endpoint, API uptime), and
+`/robots.txt`. `tests/test_discovery.py` fails if any of them and the live
+routes disagree. Aperture's own 402 body is fixed ("payment required"), so the
+sample links live in these files, the quotes and the 503 body. Optional
+`AURAGRID_CONTACT` (env) adds a contact to the manifest, llms.txt and
+l402-services; unset until the owner gives one.
 
 ## HTTPS
 
@@ -105,9 +121,9 @@ the setting.
 
 | Path | Access | Source | Refresh |
 |---|---|---|---|
-| `/api/v1/batch/btc-fees` | paid, 50 sats/h token | own bitcoind | 1 min |
-| `/api/v1/batch/ln-network` | paid, 100 sats/h token | own LND graph | 1 h |
-| `/api/v1/bundle/{btc-fees,ln-network}` | paid, 5,000 sats / 30 days | both | - |
+| `/api/v1/batch/btc-fees` | paid, $0.005 per 1-h token (USD-pegged; 8 sats at $63.7k) | own bitcoind | 1 min |
+| `/api/v1/batch/ln-network` | paid, $0.01 per 1-h token (16 sats) | own LND graph | 1 h |
+| `/api/v1/bundle/{btc-fees,ln-network}` | paid, 5,000 sats / 30 days (static) | both | - |
 | `/api/v1/batch/btc-fees-delayed` | free | own bitcoind, ≥10 min old | - |
 | `/api/v1/batch/ln-network-daily` | free | own LND, previous UTC day | daily |
 | `/api/v1/energy/grid` | free | EIA-930 hourly grid mix (fuel mix lags ~12 h) | 15 min |
@@ -115,11 +131,22 @@ the setting.
 | `/api/v1/batch/lng-supply-chain` | free | EIA monthly LNG exports | 12 h |
 | `/api/v1/batch/earthquakes` | free | USGS GeoJSON | 10 min |
 | `/api/v1/batch/maritime-weather` | free | NOAA NDBC | 10 min |
+| `/api/v1/derived/fee-timing` | free preview (proposed $0.02) | btc-fees history | 1 min |
+| `/api/v1/derived/area-risk?lat&lon&radius_km` | free preview (proposed $0.02) | earthquakes + maritime-weather | 10 min |
+| `/api/v1/derived/energy-snapshot` | free (EIA terms: owner decides) | grid + SPR + LNG | - |
+| `/api/v1/derived/grid-carbon` | free (EIA terms: owner decides) | grid mix x EIA 2023 CO2 rates | 15 min |
+
+Prices: hourly tokens are USD targets in `pricing.yaml` (`endpoints:`), converted
+by the pricer at its live BTC/USD; static fallbacks (10 / 20 sats) in
+`aperture.base.yaml` apply only without a trustworthy BTC/USD. Derived
+endpoints (`derived.py`) are labelled `method: derived`, with the formula in
+`provenance.derivation` and each input's `as_of`/stale flag; 503 when an input
+is unusable.
 
 Free routes: 30 requests/min per IP at Aperture. Retired catalog paths
 (ERCOT, PortWatch, the old unsourced feeds, `/api/v1/sample/*`, `/api/v1/pro/*`)
 answer 410 Gone. Catalog and access live in `pricing.yaml` (`access:`) and
-`app/main.py` (`CATALOG`); paid prices in `aperture.base.yaml`. After editing,
+`app/main.py` (`CATALOG`); derived endpoints in `derived.py` (`ENDPOINTS`). After editing,
 regenerate Aperture's config (`deploy/README.md`) and restart it.
 
 ## Clients
@@ -147,7 +174,12 @@ regenerate Aperture's config (`deploy/README.md`) and restart it.
   LND with the owner's explicit approval; this is the only payment the node has
   made. Edit token: `~/.auragrid/satring_edit_token` (chmod 600; needed to change
   the listing). Payment proof: `~/.auragrid/satring_payment.json`.
-- `langchain-auragrid` 0.2.0 (GitHub, not on PyPI) and `auragrid-mcp` 0.2.0 (PyPI).
+- 2026-11-19: satring text and price updated (free, edit token); 402 Index
+  registrations for btc-fees and ln-network (pending review). Full list, exact
+  texts, edit/withdraw steps and what is blocked on the owner: `LISTINGS.md`.
+- `langchain-auragrid` 0.2.0 (public on GitHub, not on PyPI); `auragrid-mcp`
+  0.2.0 on PyPI, 0.3.0 (adds the MCP server) built but not published
+  (`auragrid_mcp/PUBLISHING.md`). x402: `X402_PLAN.md` (owner decision).
 
 ## Repository
 
@@ -194,11 +226,14 @@ unreachable old commits by ID until GitHub Support clears them.
 
     /home/ubuntu/miniconda/envs/auragrid_env/bin/python -m unittest discover -s tests -t .
 
-77 offline tests (no LND, Aperture or network needed). Live checks:
+118 offline tests (no LND, Aperture or network needed). Live checks:
 `python eia_grid_feed.py --check`, `python fetcher.py --once`,
 `python verify_deployment.py --base https://84.12.79.124 --ip 84.12.79.124`
-(35 PASS, 0 WARN, 0 FAIL on 2026-11-11, run on the server; a degraded paid
-feed shows as WARN).
+(43 PASS, 0 WARN, 0 FAIL on 2026-11-19, run on the server; a stale paid feed
+shows as WARN). Weekly: `auragrid-selfcheck.timer` (Mondays ~06:00 UTC) runs
+`selfcheck.py` read-only from the public URL (discovery files, samples, 402
+challenges without paying, TLS, listings) into `/var/log/auragrid/weekly.txt`;
+FAIL lines become dashboard alerts.
 
 External check on 2026-10-31 (check-host.net, 3-10 nodes per test): only 22, 443
 and 9735 accept connections; 80 refuses outside renewals; 8000, 8080, 8081,

@@ -126,6 +126,25 @@ def cert_status(path=TLS_CERT):
             "not_before": cert.not_valid_before_utc.timestamp()}
 
 
+SELFCHECK_REPORT = os.environ.get("AURAGRID_SELFCHECK_REPORT", "/var/log/auragrid/weekly.txt")
+
+
+def selfcheck_status(path=SELFCHECK_REPORT, max_age_days=8):
+    """Latest weekly self-check report (selfcheck.py): counts, FAIL lines, age."""
+    try:
+        st = os.stat(path)
+        with open(path) as fh:
+            lines = [line.rstrip("\n") for line in fh if line.strip()]
+    except OSError:
+        return {"ok": False, "error": "no report yet (%s)" % path}
+    counts = {k: sum(1 for line in lines if " %s " % k.ljust(5) in line) for k in ("PASS", "WARN", "FAIL")}
+    age_days = (time.time() - st.st_mtime) / 86400
+    fails = [line.split(" ", 1)[1] for line in lines if " FAIL " in line]
+    return {"ok": not fails and age_days <= max_age_days, "last_run": st.st_mtime,
+            "age_days": round(age_days, 1), **counts, "failures": fails[:10],
+            "warnings": [line.split(" ", 1)[1] for line in lines if " WARN " in line][:10]}
+
+
 def disk_status(path="/"):
     u = shutil.disk_usage(path)
     pct = round(u.used / u.total * 100, 1)
