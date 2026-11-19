@@ -27,7 +27,7 @@ current state: `PROJECT_STATE.md`). Newest first.
   unknown service tried; the EIA-based ones stay free regardless until EIA's
   commercial terms are confirmed. `auragrid-mcp` 0.3.0 built and checked for upload.
 - **Contact** (owner-supplied) in the manifest, llms.txt and OpenAPI `info.contact`.
-  `auragrid-mcp` 0.3.0 published on PyPI. `mcp-publisher` 1.8.9 installed; L402 Apps submission failed on their side (retry).
+  `auragrid-mcp` 0.3.0 published on PyPI and the Official MCP Registry. `mcp-publisher` 1.8.9 installed; L402 Apps submission failed on their side (retry).
 
 ## 2026-11-11: Phase 4 (autonomous operations) and Phase 6 (report)
 
