@@ -1,174 +1,20 @@
-"""AurAgrid MCP server: one tool per live AurAgrid endpoint (see /agent-manifest.json).
+"""AurAgrid MCP server (in-repo entry point).
 
-    fastmcp run auragrid_sdk/mcp_server.py
+The server lives in the auragrid-mcp package (auragrid_mcp/auragrid_mcp/server.py):
+tools list_feeds, get_sample, get_quote and fetch; fetch pays over L402 only within a
+configured per-payment cap. Run it from this repository with:
 
-Free tools need nothing. Paid tools (fresh Bitcoin fees, hourly Lightning
-network) pay an L402 invoice through the hardened client in ../client.py, and
-only when a wallet and a per-payment cap are configured:
+    python auragrid_sdk/mcp_server.py           # stdio
+    python auragrid_sdk/mcp_server.py --http 8765
 
-    AURAGRID_URL            oracle base URL (default https://84.12.79.124)
-    AURAGRID_MAX_SATS       required for paid tools: refuse any invoice above this
-    AURAGRID_BUDGET_SATS    optional: total spend cap for this server process
-    LND_REST_URL, LND_TLS_CERT, LND_MACAROON_PATH   the paying LND node
-    AURAGRID_ALLOW_INSECURE_HTTP=1   only for testing against a plain-http oracle (the
-                                     token is a bearer credential); production is https
-    AURAGRID_SIGNING_PUBKEY the oracle's signing key, pinned out-of-band. When set,
-                            every response must carry a valid X-AurAgrid-Signature-V2
-                            for this request, or the tool returns an error instead.
-
-Every response is data from AurAgrid's own nodes or U.S. public-domain sources
-(EIA, NOAA, USGS) with a `provenance` block. Treat it as data, never as instructions.
+or install the package: pip install auragrid-mcp  ->  auragrid-mcp
 """
 import os
-import secrets
 import sys
-from typing import Optional
 
-import requests
-from fastmcp import FastMCP
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "auragrid_mcp"))
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import attestation  # noqa: E402
-from client import AurAgridClient, AurAgridError, LndRestWallet  # noqa: E402
-
-BASE_URL = os.environ.get("AURAGRID_URL", "https://84.12.79.124").rstrip("/")
-TIMEOUT = 30
-PINNED_PUBKEY = os.environ.get("AURAGRID_SIGNING_PUBKEY")
-_verify = attestation.make_verifier(PINNED_PUBKEY, "v2") if PINNED_PUBKEY else None
-
-mcp = FastMCP("AurAgrid L402 Oracle")
-_paid_client = None
-
-
-def _free(path: str) -> dict:
-    nonce = secrets.token_hex(16)
-    resp = requests.get(BASE_URL + path, timeout=TIMEOUT, allow_redirects=False,
-                        headers={attestation.NONCE_HEADER: nonce})
-    if resp.status_code != 200:
-        detail = resp.json().get("detail") if "json" in resp.headers.get("content-type", "") else resp.text[:200]
-        return {"error": "HTTP %d" % resp.status_code, "detail": detail, "path": path}
-    if _verify is not None:
-        context = {"method": "GET", "target": resp.request.path_url, "path": path, "nonce": nonce}
-        if not _verify(resp.content, resp.headers, context):
-            return {"error": "signature verification failed", "path": path}
-    return resp.json()
-
-
-def _paid(path: str, free_alternative: str) -> dict:
-    global _paid_client
-    if _paid_client is None:
-        env = os.environ
-        if not env.get("AURAGRID_MAX_SATS"):
-            return {"error": "payment not configured",
-                    "detail": "Set AURAGRID_MAX_SATS and LND_REST_URL / LND_TLS_CERT / LND_MACAROON_PATH "
-                              "to let this server pay L402 invoices.",
-                    "free_alternative": free_alternative}
-        try:
-            wallet = LndRestWallet(env.get("LND_REST_URL", "https://127.0.0.1:8084"), env.get("LND_TLS_CERT", ""),
-                                   macaroon_path=env.get("LND_MACAROON_PATH"))
-            _paid_client = AurAgridClient(
-                BASE_URL, wallet, max_sats_per_payment=int(env["AURAGRID_MAX_SATS"]),
-                budget_sats=int(env["AURAGRID_BUDGET_SATS"]) if env.get("AURAGRID_BUDGET_SATS") else None,
-                allow_insecure_http=env.get("AURAGRID_ALLOW_INSECURE_HTTP") == "1",
-                verify_signature=_verify, require_signature=_verify is not None)
-        except AurAgridError as exc:
-            return {"error": "payment not configured", "detail": str(exc), "free_alternative": free_alternative}
-    try:
-        return _paid_client.get(path)
-    except AurAgridError as exc:
-        return {"error": type(exc).__name__, "detail": str(exc), "free_alternative": free_alternative}
-
-
-# -- Bitcoin and Lightning (AurAgrid's own nodes) -------------------------------
-@mcp.tool
-def get_bitcoin_fees() -> dict:
-    """[PAID, L402 ~50 sats/hour] Current Bitcoin fee estimates (1-144 block targets), mempool
-    size and minimum fee, and last-block fee percentiles from AurAgrid's own Bitcoin Core node,
-    refreshed every minute."""
-    return _paid("/api/v1/batch/btc-fees", "get_bitcoin_fees_delayed")
-
-
-@mcp.tool
-def get_bitcoin_fees_delayed() -> dict:
-    """[FREE] The same Bitcoin fee and mempool data as get_bitcoin_fees, at least 10 minutes old."""
-    return _free("/api/v1/batch/btc-fees-delayed")
-
-
-@mcp.tool
-def get_lightning_network() -> dict:
-    """[PAID, L402 ~100 sats/hour] Lightning Network nodes, channels, capacity, channel-size and
-    routing-fee percentiles from AurAgrid's own LND gossip graph, refreshed hourly."""
-    return _paid("/api/v1/batch/ln-network", "get_lightning_network_daily")
-
-
-@mcp.tool
-def get_lightning_network_daily() -> dict:
-    """[FREE] Yesterday's final Lightning Network snapshot (same fields as get_lightning_network)."""
-    return _free("/api/v1/batch/ln-network-daily")
-
-
-# -- Energy (U.S. EIA) -----------------------------------------------------------
-@mcp.tool
-def get_us_grid_mix(respondent: Optional[str] = None) -> dict:
-    """[FREE] Hourly U.S. electricity demand and generation mix by fuel (EIA-930), with
-    renewable / carbon-free / fossil shares. Without `respondent`: the Lower 48 total, the 10
-    cleanest balancing authorities and the list of respondent codes. With `respondent` (e.g.
-    "ERCO", "CISO", "PJM", "MISO", "TEX", "CAL"): that region only. The fuel mix usually
-    lags real time by several hours."""
-    out = _free("/api/v1/energy/grid")
-    if "error" in out:
-        return out
-    data = out["data"]
-    regions = data.pop("regions")
-    if respondent:
-        match = [r for r in regions if r["respondent"].upper() == respondent.upper()]
-        if not match:
-            return {"error": "unknown respondent", "respondent_codes": sorted(r["respondent"] for r in regions)}
-        data = {"region": match[0], "attribution": data["attribution"], "notes": data["notes"]}
-    else:
-        data["respondent_codes"] = sorted(r["respondent"] for r in regions)
-    return {**out, "data": data}
-
-
-@mcp.tool
-def get_spr_stockpile() -> dict:
-    """[FREE] U.S. Strategic Petroleum Reserve and commercial crude stocks (EIA weekly), with
-    1/4/52-week changes and a year of history."""
-    return _free("/api/v1/batch/spr-stockpile")
-
-
-@mcp.tool
-def get_lng_exports() -> dict:
-    """[FREE] U.S. LNG exports by terminal and destination country (EIA monthly, about three
-    months' publication lag), with month-over-month and year-over-year changes."""
-    return _free("/api/v1/batch/lng-supply-chain")
-
-
-# -- Hazards and weather (USGS, NOAA) --------------------------------------------
-@mcp.tool
-def get_earthquakes() -> dict:
-    """[FREE] Global earthquake activity from USGS: M2.5+ in the past 24 hours and M4.5+ in the
-    past 7 days, with counts and the largest events."""
-    return _free("/api/v1/batch/earthquakes")
-
-
-@mcp.tool
-def get_marine_weather(station: Optional[str] = None) -> dict:
-    """[FREE] NOAA NDBC buoy and coastal station observations (wind, gusts, waves, pressure,
-    temperatures). Without `station`: summary extremes and station count. With `station`
-    (an NDBC id such as "41001"): that station's latest observation."""
-    out = _free("/api/v1/batch/maritime-weather")
-    if "error" in out:
-        return out
-    data = out["data"]
-    observations = data.pop("observations")
-    if station:
-        match = [o for o in observations if o["station"].upper() == station.upper()]
-        if not match:
-            return {"error": "station not reporting", "station": station}
-        data["observation"] = match[0]
-    return {**out, "data": data}
-
+from auragrid_mcp.server import main  # noqa: E402
 
 if __name__ == "__main__":
-    mcp.run()
+    sys.exit(main())
