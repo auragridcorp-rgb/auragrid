@@ -1,0 +1,23 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.auragridcorp-rgb/auragrid",
+  "description": "Bitcoin fee and Lightning data (L402, free samples) and U.S. EIA/USGS/NOAA feeds, signed.",
+  "repository": {"url": "https://github.com/auragridcorp-rgb/auragrid", "source": "github", "subfolder": "auragrid_mcp"},
+  "version": "0.3.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "auragrid-mcp",
+      "version": "0.3.0",
+      "runtimeHint": "uvx",
+      "transport": {"type": "stdio"},
+      "environmentVariables": [
+        {"name": "AURAGRID_MAX_SATS", "description": "Per-payment cap in sats; required only to buy paid feeds", "isRequired": false},
+        {"name": "AURAGRID_BUDGET_SATS", "description": "Optional total spend cap in sats", "isRequired": false},
+        {"name": "LND_REST_URL", "description": "Your LND REST URL (only to pay)", "isRequired": false},
+        {"name": "LND_TLS_CERT", "description": "Path to LND's TLS certificate (only to pay)", "isRequired": false},
+        {"name": "LND_MACAROON_PATH", "description": "Path to a pay-and-decode-only macaroon (only to pay)", "isRequired": false, "isSecret": true}
+      ]
+    }
+  ]
+}

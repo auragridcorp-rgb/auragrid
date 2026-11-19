@@ -2,4 +2,4 @@
 from .client import (AurAgridClient, AurAgridError, HTTPStatusError, InsecureConfig, LndRestWallet,  # noqa: F401
                      PaymentFailed, PaymentUnknown, PriceRejected, SignatureError)
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
