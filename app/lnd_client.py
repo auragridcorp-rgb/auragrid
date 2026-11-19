@@ -37,8 +37,15 @@ class LNDClient:
         return resp.json()
 
     def get_invoices(self) -> list:
+        return self.get_invoices_page()[0]
+
+    def get_invoices_page(self):
+        """(newest invoices up to max_invoices, total invoices ever created)."""
         data = self._get("/v1/invoices", {"num_max_invoices": self.max_invoices, "reversed": "true"})
-        return data.get("invoices") or []
+        invoices = data.get("invoices") or []
+        # last_index_offset of a reversed query = add_index of the newest invoice = all-time count.
+        total = int(data.get("last_index_offset") or len(invoices))
+        return invoices, max(total, len(invoices))
 
     def get_channels(self) -> dict:
         return self._get("/v1/channels")

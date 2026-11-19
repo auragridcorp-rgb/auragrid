@@ -47,7 +47,8 @@ PUBLIC_SERVICE = "public-free"
 FREE_FEEDS_SERVICE = "free-feeds"
 RETIRED_SERVICE = "retired"
 PUBLIC_PATHS = (
-    r"^/(buy|terms|llms\.txt|openapi\.json|agent-manifest\.json|\.well-known/ai-plugin\.json"
+    r"^/(buy|terms|llms\.txt|robots\.txt|status|status\.json|openapi\.json|agent-manifest\.json"
+    r"|\.well-known/ai-plugin\.json|\.well-known/l402-services"
     r"|api/v1/sample/[a-z0-9-]+|api/v1/price/[a-z0-9/-]+)$"
 )
 PUBLIC_RATE = {"requests": 60, "per": "1m", "burst": 20}   # per client IP; protects egress

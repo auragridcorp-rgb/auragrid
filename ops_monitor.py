@@ -135,8 +135,10 @@ def disk_status(path="/"):
 class TrafficLog:
     """Rolling per-day aggregates of Aperture's access log."""
 
-    def __init__(self, path, classify, self_ips=(), days=14, min_interval=15.0, clock=time.time):
+    def __init__(self, path, classify, self_ips=(), days=14, min_interval=15.0, clock=time.time,
+                 sample_paths=()):
         self.path, self.classify, self.days = path, classify, days
+        self.sample_paths = set(sample_paths)   # free samples of paid feeds (counted as "sample_hits")
         self.self_ips = set(self_ips) | {"127.0.0.1", "::1"}
         self.min_interval, self.clock = min_interval, clock
         self._lock = threading.Lock()
@@ -179,6 +181,8 @@ class TrafficLog:
         cat = self.classify(path) if method in ("GET", "HEAD", "POST") else "noise"
         d = self._day(day)
         d["counts"][cat] += 1
+        if path in self.sample_paths:
+            d["counts"]["sample"] += 1
         d["ips"][cat].add(ip)
         d["paths"][cat][path[:120]] += 1
         if cat != "noise":
@@ -247,7 +251,7 @@ class TrafficLog:
             return {
                 "days": days,
                 "daily": daily,
-                "totals": {c: totals.get(c, 0) for c in CATEGORIES},
+                "totals": {**{c: totals.get(c, 0) for c in CATEGORIES}, "sample_hits": totals.get("sample", 0)},
                 "clients": {c: len(ips[c]) for c in CATEGORIES} | {"real": len(real_ips)},
                 "top_paths": {c: [{"path": p, "requests": n} for p, n in paths[c].most_common(8)]
                               for c in CATEGORIES},

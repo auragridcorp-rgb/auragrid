@@ -158,6 +158,7 @@ feeds.describe(
     "lng-supply-chain", source="U.S. Energy Information Administration (EIA), natural gas exports by point of exit",
     url="https://api.eia.gov/v2/natural-gas/move/poe2/", terms_url="https://www.eia.gov/about/copyrights_reuse.php",
     attribution="Source: U.S. Energy Information Administration. Public domain; EIA does not endorse AurAgrid.",
+    license='U.S. government work, public domain; credit the U.S. Energy Information Administration',
     as_of=lambda snap: snap["period"])
 
 

@@ -61,7 +61,7 @@ class FreeTierRouteTests(unittest.TestCase):
         terms = self.client.get("/terms").text
         self.assertIn("30 requests per minute", terms)
         self.assertIn("90 days", terms)
-        self.assertIn("(coming soon)", self.client.get("/llms.txt").text)
+        self.assertIn("status: coming_soon", self.client.get("/llms.txt").text)
 
     def test_large_responses_are_gzipped(self):
         r = self.client.get("/api/v1/batch/maritime-weather", headers={"Accept-Encoding": "gzip"})

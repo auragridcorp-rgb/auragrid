@@ -94,6 +94,7 @@ feeds.describe(
     url="bitcoin-core-rpc:estimatesmartfee,getmempoolinfo,getblockstats",
     terms_url="/terms",
     attribution="Computed by AurAgrid from its own Bitcoin Core node.",
+    license="AurAgrid's own computation from public Bitcoin network data; use under AurAgrid's /terms",
     # The observation time, not the tip's block time: the mempool and fee estimates move
     # every minute, and keying on the block stored (and served) one snapshot per block.
     as_of=lambda snap: snap.get("observed_at") or snap["tip"]["block_time_utc"])

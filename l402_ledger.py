@@ -85,6 +85,10 @@ class Ledger:
                        plan         TEXT NOT NULL DEFAULT 'hourly'
                    )"""
             )
+            # Daily operational counters (stale refusals and the like), kept across restarts.
+            conn.execute("""CREATE TABLE IF NOT EXISTS counters (
+                                name TEXT NOT NULL, day TEXT NOT NULL, count INTEGER NOT NULL DEFAULT 0,
+                                PRIMARY KEY (name, day))""")
             columns = {row[1] for row in conn.execute("PRAGMA table_info(token_usage)")}
             if "plan" not in columns:  # ledgers created before plans existed
                 conn.execute("ALTER TABLE token_usage ADD COLUMN plan TEXT NOT NULL DEFAULT 'hourly'")
@@ -132,6 +136,21 @@ class Ledger:
                     self._queue.task_done()
         finally:
             conn.close()
+
+    def bump(self, name: str, day: str) -> None:
+        """Add one to a daily counter (day = 'YYYY-MM-DD', UTC)."""
+        try:
+            with self._db() as conn:
+                conn.execute("INSERT INTO counters (name, day, count) VALUES (?, ?, 1) "
+                             "ON CONFLICT(name, day) DO UPDATE SET count = count + 1", (name, day))
+        except Exception:
+            log.exception("Counter %s not recorded", name)
+
+    def counter_total(self, name: str, since_day: str) -> int:
+        with self._db() as conn:
+            row = conn.execute("SELECT COALESCE(SUM(count), 0) FROM counters WHERE name=? AND day>=?",
+                               (name, since_day)).fetchone()
+        return int(row[0])
 
     def flush(self) -> None:
         self._queue.join()

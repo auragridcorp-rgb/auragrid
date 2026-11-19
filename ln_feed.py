@@ -85,4 +85,5 @@ feeds.describe(
     url="lnd-rest:/v1/graph/info,/v1/graph",
     terms_url="/terms",
     attribution="Computed by AurAgrid from the public Lightning gossip graph seen by its own LND node.",
+    license="AurAgrid's own computation from public Lightning gossip; use under AurAgrid's /terms",
     as_of=lambda snap: snap["observed_at"])

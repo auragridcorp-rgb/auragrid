@@ -41,7 +41,8 @@ class TrafficLogTests(unittest.TestCase):
                         + line("2026-11-11", "9.9.9.9", "/llms.txt")
                         + "2026-11-08 00:55:17.350 [INF] APER: Starting the server, listening on 0.0.0.0:443.\n")
         s = log.summary(7)
-        self.assertEqual(s["totals"], {"paid": 1, "free": 0, "quote": 0, "discovery": 1, "noise": 1})
+        self.assertEqual(s["totals"], {"paid": 1, "free": 0, "quote": 0, "discovery": 1, "noise": 1,
+                                       "sample_hits": 0})
         self.assertEqual(s["clients"]["real"], 1)
         self.assertEqual(s["clients"]["noise"], 1)
         self.assertEqual(s["self_requests"], 1)

@@ -156,4 +156,4 @@ class ManifestTests(unittest.TestCase):
         paid = [e for e in m["endpoints"] if e["access"] == "paid"]
         self.assertTrue(paid)
         for e in paid:
-            self.assertEqual((e["status"], e["price_sats"]), ("degraded", 0), e["path"])
+            self.assertEqual((e["status"], e["price_sats"]), ("stale", 0), e["path"])

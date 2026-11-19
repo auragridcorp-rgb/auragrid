@@ -191,10 +191,16 @@ _SOURCES: dict = {}
 
 
 def describe(key: str, *, source: str, url: str, terms_url: str, attribution: str,
-             as_of: Callable[[dict], str]):
-    """Register where a feed's data comes from and how to read its own timestamp."""
+             as_of: Callable[[dict], str], license: Optional[str] = None):
+    """Register where a feed's data comes from, its licence and how to read its own timestamp."""
     _SOURCES[key] = {"source": source, "url": url, "terms_url": terms_url,
-                     "attribution": attribution, "as_of": as_of}
+                     "attribution": attribution, "as_of": as_of, "license": license}
+
+
+def source_info(key: str) -> dict:
+    """Public description of a feed's source (no callables)."""
+    meta = _SOURCES.get(key) or {}
+    return {k: meta.get(k) for k in ("source", "url", "terms_url", "license", "attribution") if meta.get(k)}
 
 
 def provenance(key: str, snapshot: dict, retrieved_at: str) -> Optional[dict]:

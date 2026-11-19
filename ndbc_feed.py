@@ -135,6 +135,7 @@ feeds.describe(
     url="https://www.ndbc.noaa.gov/data/latest_obs/latest_obs.txt",
     terms_url="https://www.weather.gov/disclaimer",
     attribution="Source: NOAA National Data Buoy Center. Public domain; NOAA does not endorse AurAgrid.",
+    license='U.S. public domain (NOAA/NWS); no implied endorsement by NOAA',
     as_of=lambda snap: snap["observed_between"][1])
 
 
