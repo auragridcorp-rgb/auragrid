@@ -631,6 +631,13 @@ def proxy_health():
         alerts.append("Disk %.0f%% full" % disk["used_pct"])
     if not SIGNING_ENABLED:
         alerts.append("Response signing is off")
+    selfcheck = ops_monitor.selfcheck_status()
+    if selfcheck.get("failures"):
+        alerts += ["Weekly self-check: " + f for f in selfcheck["failures"]]
+    elif selfcheck.get("last_run") and selfcheck["age_days"] > 8:
+        alerts.append("Weekly self-check has not run for %.0f days" % selfcheck["age_days"])
+    elif selfcheck.get("error"):
+        notices.append("Weekly self-check: " + selfcheck["error"])
     return {
         "checked_at": time.time(),
         "ok": not alerts,
@@ -640,6 +647,7 @@ def proxy_health():
         "feeds": feeds_,
         "cert": cert,
         "disk": disk,
+        "selfcheck": selfcheck,
         "feeds_db_mb": db_mb,
         "signing_enabled": SIGNING_ENABLED,
         "public_url": PUBLIC_URL or None,
@@ -1263,7 +1271,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 <span id="health-checked" class="text-[11px] font-mono text-slate-500"></span>
             </div>
             <div id="svc-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm"></div>
-            <div id="infra-row" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4 text-sm"></div>
+            <div id="infra-row" class="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-4 text-sm"></div>
         </div>
 
         <!-- Feeds -->
@@ -1625,6 +1633,13 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                      h.signing_enabled ? "text-white" : "text-red-400"),
                 tile("Disk used", d.used_pct + "%", d.free_gb + " GB free", d.ok ? "text-white" : "text-red-400"),
                 tile("Feed database", h.feeds_db_mb + " MB", "var/feeds.db"),
+                (() => {
+                    const sc = h.selfcheck || {};
+                    if (!sc.last_run) return tile("Weekly self-check", "none yet", sc.error || "", "text-slate-400");
+                    return tile("Weekly self-check", sc.PASS + " pass · " + sc.FAIL + " fail",
+                                "last run " + ago(h.checked_at - sc.last_run) + (sc.WARN ? " · " + sc.WARN + " warnings" : ""),
+                                sc.ok ? "text-white" : "text-red-400");
+                })(),
             );
 
             const body = $("feeds-tbody");

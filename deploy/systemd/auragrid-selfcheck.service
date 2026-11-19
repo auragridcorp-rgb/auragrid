@@ -1,0 +1,21 @@
+[Unit]
+Description=AurAgrid weekly self-check (read-only; never pays, never restarts anything)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/AurAgrid
+ExecStart=/home/ubuntu/miniconda/envs/auragrid_env/bin/python -I /home/ubuntu/AurAgrid/selfcheck.py --out /var/log/auragrid/weekly.txt
+# Exit 1 means "a check FAILed"; the report and the dashboard carry that, not the unit state.
+SuccessExitStatus=1
+# Read-only everywhere but its report (LogsDirectory creates /var/log/auragrid, owned by
+# User, and makes it writable); no access to wallets, macaroons or secrets.
+LogsDirectory=auragrid
+ProtectSystem=strict
+ProtectHome=read-only
+InaccessiblePaths=-/home/ubuntu/.lnd -/home/ubuntu/.aperture -/home/ubuntu/.auragrid -/home/ubuntu/.bitcoin -/etc/auragrid -/home/ubuntu/AurAgrid/gateway.secret -/home/ubuntu/AurAgrid/attest.macaroon
+NoNewPrivileges=true
+PrivateTmp=true
+CapabilityBoundingSet=

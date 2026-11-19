@@ -3,6 +3,26 @@
 AurAgrid's pivot to a lean, free-tier L402 data oracle (plan: `RESEARCH.md`;
 current state: `PROJECT_STATE.md`). Newest first.
 
+## 2026-11-19: machine discovery (CLAUDE_CODE_PROMPT_MACHINE_DISCOVERY.md)
+
+- **Stale gate:** a paid feed past its stale limit answers 503 (`stale`, true
+  `as_of`, free `sample_url`) and Aperture issues no invoice; refusals counted.
+- **Prices:** hourly tokens USD-pegged at the live BTC rate: `btc-fees` $0.005
+  (was 50 sats), `ln-network` $0.01 (was 100 sats); bundle unchanged (5,000 sats).
+- **Discovery:** OpenAPI 3.1 (402 flow, live prices, response models, bundle
+  paths), richer manifest and llms.txt (sources, licences, intervals, samples),
+  `/.well-known/l402-services`, `/status(.json)`, `/robots.txt`; a test keeps them
+  equal to the live routes.
+- **Derived endpoints (free previews):** fee timing, area risk, energy snapshot,
+  grid carbon intensity (`derived.py`).
+- **MCP server** in `auragrid-mcp` 0.3.0 (not published): list_feeds, get_sample,
+  get_quote, fetch (pays only within a configured cap).
+- **Weekly self-check** timer, results on the dashboard.
+- **Dashboard truth:** all-time invoice count (11,164), the invented "Mainnet
+  Lightning Routing Liquidity" service removed, stale-refusal and sample-hit counters.
+- **Listings:** 402 Index (2 endpoints, pending review); satring text updated.
+  `LISTINGS.md`, `X402_PLAN.md` (decision pending).
+
 ## 2026-11-11: Phase 4 (autonomous operations) and Phase 6 (report)
 
 - **Listed on satring.com** (1,000-sat listing fee paid once, with the owner's
