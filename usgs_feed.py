@@ -27,6 +27,10 @@ def _event(f: dict) -> dict:
             "pager_alert": p.get("alert"), "significance": p.get("sig"), "url": p.get("url")}
 
 
+def _compact(e: dict) -> dict:
+    return {k: e[k] for k in ("id", "magnitude", "time", "lat", "lon", "depth_km", "tsunami_flag")}
+
+
 def build_snapshot(day: dict, week: dict) -> dict:
     day_events = [_event(f) for f in day.get("features", []) if f["properties"].get("mag") is not None]
     week_events = [_event(f) for f in week.get("features", []) if f["properties"].get("mag") is not None]
@@ -46,6 +50,11 @@ def build_snapshot(day: dict, week: dict) -> dict:
                     "tsunami_flagged": [e for e in week_events if e["tsunami_flag"]],
                     "pager_alerts": [e for e in week_events if e["pager_alert"]],
                     "largest": by_mag(week_events)[:10]},
+        # Compact list of every event (for area queries in derived.py): M2.5+ past day, M4.5+ past week.
+        "events": {
+            "m2_5_plus_24h": [_compact(e) for e in day_events],
+            "m4_5_plus_7d": [_compact(e) for e in week_events],
+        },
         "notes": "USGS real-time feeds; magnitudes and locations can be revised. "
                  "tsunami_flag means the event is in a tsunami-relevant area, not that a tsunami occurred.",
     }

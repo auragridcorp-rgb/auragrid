@@ -129,6 +129,13 @@ class Store:
                                "ORDER BY retrieved_at DESC LIMIT 1", (feed, cutoff)).fetchone()
         return Snapshot(feed, _unpack(row[0]), row[1], row[2]) if row else None
 
+    def history(self, feed: str, since: float) -> list:
+        """[(retrieved_at, data)] of raw snapshots retrieved at or after `since`, oldest first."""
+        with self._db() as conn:
+            rows = conn.execute("SELECT retrieved_at, payload FROM raw WHERE feed=? AND retrieved_at>=? "
+                                "ORDER BY retrieved_at", (feed, since)).fetchall()
+        return [(r, _unpack(p)) for r, p in rows]
+
     def latest_retrieved_at(self, feed: str) -> Optional[float]:
         """When the newest stored snapshot was fetched (what freshness is measured from)."""
         with self._db() as conn:

@@ -87,6 +87,7 @@ from attestation import AttestationMiddleware, lnd_rest_signer
 from l402_ledger import L402LedgerMiddleware, Ledger, hash_hex, token_payment_hash
 from pass_support import HOURLY, PlanRewriteMiddleware, PlanRouter, feed_path, load_access, load_plans
 from pricer import PriceEngine, normalize_path
+import derived
 import jobs
 import ops_monitor
 from store import Store
@@ -556,7 +557,7 @@ def classify_path(path: str) -> str:
     norm = normalize_path(path) if path.startswith("/api/v1/") else None
     if norm in PAID_PATHS:
         return "paid"
-    if norm in FREE_PATHS:
+    if norm in FREE_PATHS or (norm and norm in derived.ENDPOINTS):
         return "free"
     if path.startswith("/api/v1/price/"):
         return "quote"
@@ -682,6 +683,10 @@ def _source_key(key: str) -> str:
 
 def _freshness(key: str) -> dict:
     """Age of the newest stored data behind an endpoint, against its stale limit."""
+    if key in derived.ENDPOINTS:   # a derived endpoint is as fresh as its stalest input
+        parts = [_freshness(k) for k in derived.ENDPOINTS[key]["inputs"]]
+        worst = max(parts, key=lambda p: (p["stale"], p["age_seconds"] or 10**9))
+        return {**worst, "inputs": derived.ENDPOINTS[key]["inputs"]}
     src = _source_key(key)
     newest = STORE.latest_retrieved_at(src)
     stale_after = jobs.LIMITS.get(key, (None,))[0]
@@ -693,8 +698,10 @@ def _freshness(key: str) -> dict:
 
 
 def _update_interval(key: str):
-    derived = jobs.DERIVED.get(key, {})
-    if derived.get("daily"):
+    if key in derived.ENDPOINTS:
+        return max(_update_interval(k) or 0 for k in derived.ENDPOINTS[key]["inputs"]) or None
+    copy = jobs.DERIVED.get(key, {})
+    if copy.get("daily"):
         return 86400
     job = JOBS.get(_source_key(key))
     return job.interval if job else None
@@ -718,10 +725,10 @@ def _catalog_entries() -> list[dict]:
                  "stale_after_seconds": jobs.LIMITS.get(key, (None,))[0],
                  **{("source_" + k if k in ("url", "terms_url") else k): v
                     for k, v in feeds.source_info(_source_key(key)).items()}}
-        derived = jobs.DERIVED.get(key)
-        if derived:
-            entry["copy_of"] = feed_path(derived["source"], BATCH_PREFIX)
-            entry["delay"] = "previous UTC day" if derived.get("daily") else "%d minutes" % (derived["delay"] // 60)
+        copy = jobs.DERIVED.get(key)
+        if copy:
+            entry["copy_of"] = feed_path(copy["source"], BATCH_PREFIX)
+            entry["delay"] = "previous UTC day" if copy.get("daily") else "%d minutes" % (copy["delay"] // 60)
         if free:
             entry["rate_limit"] = "%d requests/minute per IP" % ACCESS.requests_per_minute
             entries.append(entry)
@@ -745,6 +752,19 @@ def _catalog_entries() -> list[dict]:
         entry["price_usd_approx"] = _usd(entry.get("price_sats"))
         if sample_url(key):
             entry["sample_url"] = sample_url(key)
+        entries.append(entry)
+    for key, meta in derived.ENDPOINTS.items():
+        fr = _freshness(key)
+        entry = {"path": "/api/v1/" + key, "name": meta["name"], "tier": meta["tier"],
+                 "description": meta["description"], "access": "free", "auth": "none",
+                 "status": "preview", "method": "derived", "inputs": [feed_path(k, BATCH_PREFIX) for k in meta["inputs"]],
+                 "update_interval_seconds": _update_interval(key), "stale_after_seconds": fr["stale_after_seconds"],
+                 "source": "Derived by AurAgrid (see provenance.derivation)", "license": meta["license"],
+                 "rate_limit": "%d requests/minute per IP" % ACCESS.requests_per_minute,
+                 "proposed_price_usd": meta["proposed_price_usd"],
+                 "pricing_note": "Free preview; a price is proposed and awaits the owner's approval."}
+        if meta.get("parameters"):
+            entry["parameters"] = meta["parameters"]
         entries.append(entry)
     return entries
 
@@ -887,6 +907,7 @@ def l402_services(request: Request):
 @app.get("/agent-manifest.json")
 async def get_agent_manifest(request: Request):
     base = PUBLIC_URL or str(request.base_url).rstrip("/")
+    entries = _catalog_entries()
     signature = {
         "scheme": "auragrid_attest_v2",
         "header": attestation.SIG_HEADER_V2,
@@ -920,7 +941,9 @@ async def get_agent_manifest(request: Request):
             "token_ttl_seconds. Every paid endpoint has a free sample (sample_url: its delayed or daily "
             "copy, real data with its true as_of). A paid endpoint whose data is past its stale limit "
             "answers 503 with stale=true and its as_of, and issues no invoice; check status_url first."
-            % len(OFFERED)
+            % len(entries)
+            + (" Endpoints with method 'derived' are computed by AurAgrid from its stored feeds; "
+               "provenance.derivation gives the formula and provenance.inputs each input's as_of.")
             + (" Successful /api/v1/ data responses carry X-AurAgrid-Signature-V2 and X-AurAgrid-Timestamp "
                "headers (send a random X-AurAgrid-Nonce to bind the signature to your request); verify them "
                "as described in `signature` against the published pubkey, pinned out-of-band."
@@ -931,8 +954,8 @@ async def get_agent_manifest(request: Request):
         "status_url": base + "/status.json",
         "links": _links(base),
         **({"contact": CONTACT} if CONTACT else {}),
-        "endpoints_count": len(OFFERED),
-        "endpoints": _catalog_entries(),
+        "endpoints_count": len(entries),
+        "endpoints": entries,
         "plans": _plan_entries(),
         "checkout_url": base + "/buy",
         "payment_protocol": "L402",
@@ -1777,6 +1800,77 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 @app.get("/", response_class=HTMLResponse, dependencies=[Depends(require_admin)], include_in_schema=False)
 def serve_dashboard():
     return DASHBOARD_HTML
+
+
+# ---------------------------------------------------------------------------
+# Derived endpoints (derived.py): free previews, computed from stored feeds
+# ---------------------------------------------------------------------------
+class DerivedResponse(BaseModel):
+    feed: str
+    method: str = "derived"
+    plan: str = "free"
+    served_at: str
+    stale: bool = Field(description="True when any input is older than its stale limit")
+    provenance: dict = Field(description="source, derivation (the formula), inputs with as_of and stale flags")
+    data: dict
+
+
+_derived_cache: dict = {}
+DERIVED_TTL_SECONDS = 60.0
+
+
+def _derived_response(key: str, *args):
+    """Compute (or reuse for 60 s) a derived result; 503 with the stale input when one is unusable."""
+    cache_key = (key,) + args
+    hit = _derived_cache.get(cache_key)
+    if hit and time.monotonic() - hit[0] < DERIVED_TTL_SECONDS:
+        result = hit[1]
+    else:
+        try:
+            result = derived.ENDPOINTS[key]["func"](STORE, *args)
+        except derived.InputUnavailable as exc:
+            return JSONResponse({"detail": "An input feed has no usable data; not served.", "feed": key,
+                                 "stale": True, "input": exc.feed, "as_of": exc.as_of, "status_url": "/status.json"},
+                                status_code=503, headers={"Retry-After": "300", "Cache-Control": "no-store"})
+        if len(_derived_cache) > 256:
+            _derived_cache.clear()
+        _derived_cache[cache_key] = (time.monotonic(), result)
+    return {"feed": result["feed"], "method": "derived", "plan": "free",
+            "served_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "stale": result["stale"], "provenance": result["provenance"], "data": result["data"]}
+
+
+_DERIVED_RESPONSES = {200: {"model": DerivedResponse},
+                      503: {"description": "An input feed has no usable data (stale=true, as_of of that input)"}}
+
+
+@app.get("/api/v1/derived/fee-timing", tags=["free", "derived"], responses=_DERIVED_RESPONSES,
+         summary=derived.ENDPOINTS["derived/fee-timing"]["name"],
+         description=derived.ENDPOINTS["derived/fee-timing"]["description"])
+def derived_fee_timing():
+    return _derived_response("derived/fee-timing")
+
+
+@app.get("/api/v1/derived/area-risk", tags=["free", "derived"], responses=_DERIVED_RESPONSES,
+         summary=derived.ENDPOINTS["derived/area-risk"]["name"],
+         description=derived.ENDPOINTS["derived/area-risk"]["description"])
+def derived_area_risk(lat: float = Query(..., ge=-90, le=90), lon: float = Query(..., ge=-180, le=180),
+                      radius_km: float = Query(500, ge=10, le=2000)):
+    return _derived_response("derived/area-risk", round(lat, 3), round(lon, 3), round(radius_km))
+
+
+@app.get("/api/v1/derived/energy-snapshot", tags=["free", "derived"], responses=_DERIVED_RESPONSES,
+         summary=derived.ENDPOINTS["derived/energy-snapshot"]["name"],
+         description=derived.ENDPOINTS["derived/energy-snapshot"]["description"])
+def derived_energy_snapshot():
+    return _derived_response("derived/energy-snapshot")
+
+
+@app.get("/api/v1/derived/grid-carbon", tags=["free", "derived"], responses=_DERIVED_RESPONSES,
+         summary=derived.ENDPOINTS["derived/grid-carbon"]["name"],
+         description=derived.ENDPOINTS["derived/grid-carbon"]["description"])
+def derived_grid_carbon():
+    return _derived_response("derived/grid-carbon")
 
 
 # ---------------------------------------------------------------------------
