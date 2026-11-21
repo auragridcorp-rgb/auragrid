@@ -216,6 +216,16 @@ unreachable old commits by ID until GitHub Support clears them.
 
 ## Known gaps
 
+- **First settled L402 invoice (2026-11-21) is an owner self-test, not customer revenue.**
+  `btc-fees` bought end to end with a circular payment from our own node (owner-approved,
+  fee cap 2 sats): 9 sats (USD peg at the day's BTC price) out via Amboss.Space and back
+  through the 1M channel on a 5-hop route, fee 1.006 sats. The invoice settled, the token
+  returned HTTP 200 with fresh data and a valid v2 signature, and the dashboard recorded
+  9 sats / 1 token / 1 call under hourly, `btc-fees`. So the dashboard's revenue includes
+  9 self-paid sats: subtract them when counting real sales. LND's default pathfinding
+  found no route (long route below its minimum success probability); `buildroute` +
+  `sendtoroute` did.
+
 - **Pending (owner, after the build is finished): dashboard access without the
   SSH tunnel**, e.g. from a phone. Options discussed 2026-11-21: Tailscale (private,
   free, recommended) or a public `/ops/` path behind the password with lockout.
