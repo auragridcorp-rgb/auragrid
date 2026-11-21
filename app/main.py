@@ -1439,19 +1439,49 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             return e;
         }
 
+        // Every failure gets a kind, so the page can tell "this browser lost the server"
+        // (e.g. a closed SSH tunnel) apart from "the server is up but LND is not answering".
         async function getJSON(url) {
-            const r = await fetch(url, { credentials: "same-origin" });
-            if (!r.ok) throw new Error(url + " returned " + r.status);
+            let r;
+            try {
+                r = await fetch(url, { credentials: "same-origin" });
+            } catch (e) {
+                const err = new Error("cannot reach the dashboard server");
+                err.kind = "offline";
+                throw err;
+            }
+            if (!r.ok) {
+                const err = new Error(url + " returned " + r.status);
+                err.kind = r.status === 401 ? "auth" : r.status === 502 ? "lnd" : "server";
+                err.status = r.status;
+                throw err;
+            }
             return r.json();
         }
 
-        function setStatus(ok, label) {
-            const color = ok ? "bg-emerald-500" : "bg-red-500";
-            $("dot").className = "relative inline-flex rounded-full h-4 w-4 " + color;
-            $("pulse").className = "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 " + color;
+        let lastSync = null;
+        const since = () => lastSync ? " · data from " + lastSync.toLocaleTimeString() : "";
+        const NODE_STATES = {
+            ok:      { dot: "bg-emerald-500", text: "Reachable",   cls: "text-cyan-400" },
+            syncing: { dot: "bg-amber-500",   text: "Syncing",     cls: "text-amber-400" },
+            lnd:     { dot: "bg-red-500",     text: "Unreachable", cls: "text-red-400" },
+            unknown: { dot: "bg-slate-500",   text: "Unknown",     cls: "text-slate-400" },
+        };
+
+        function setStatus(state, label) {
+            const s = NODE_STATES[state] || NODE_STATES.unknown;
+            $("dot").className = "relative inline-flex rounded-full h-4 w-4 " + s.dot;
+            $("pulse").className = "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 " + s.dot;
             $("sync-label").textContent = label;
-            $("stat-node").textContent = ok ? "Reachable" : "Unreachable";
-            $("stat-node").className = "text-3xl font-black mt-1 " + (ok ? "text-cyan-400" : "text-red-400");
+            $("stat-node").textContent = s.text;
+            $("stat-node").className = "text-3xl font-black mt-1 " + s.cls;
+        }
+
+        function failureLabel(err) {
+            if (err.kind === "offline") return "Lost connection to the AurAgrid server (SSH tunnel closed?), retrying" + since();
+            if (err.kind === "auth") return "Signed out: reload the page to sign in again" + since();
+            if (err.kind === "lnd") return "The API is up but LND is not answering, retrying" + since();
+            return "Dashboard API error (HTTP " + (err.status || "?") + "), retrying" + since();
         }
 
         function renderServices(rows) {
@@ -1543,10 +1573,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 renderServices(stats.service_breakdown);
                 renderPlans(stats.revenue_by_plan || {}, stats.usage_by_plan || {});
                 renderTransactions(txs.transactions);
-                setStatus(true, "Synced " + new Date().toLocaleTimeString());
+                lastSync = new Date();
+                setStatus(info.synced_to_chain === false ? "syncing" : "ok", "Synced " + lastSync.toLocaleTimeString());
             } catch (err) {
                 console.error("Dashboard refresh failed:", err);
-                setStatus(false, "Sync failed, retrying");
+                // Only an LND failure reported by the server says anything about the node.
+                setStatus(err.kind === "lnd" ? "lnd" : "unknown", failureLabel(err));
             }
         }
 
@@ -1791,7 +1823,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             const [h, t] = await Promise.allSettled([getJSON("/api/proxy/health"), getJSON("/api/proxy/traffic?days=" + trafficDays)]);
             if (h.status === "fulfilled") renderHealth(h.value);
             else { $("alerts").className = "rounded-xl px-5 py-3 text-sm font-semibold border bg-red-500/10 text-red-300 border-red-500/30";
-                   $("alerts").textContent = "⚠ Health check failed: " + h.reason.message; }
+                   $("alerts").textContent = h.reason.kind === "offline"
+                       ? "⚠ This browser cannot reach the AurAgrid server. If you use an SSH tunnel, reconnect it. The figures below are not live" + since() + "."
+                       : "⚠ Health check failed: " + h.reason.message; }
             if (t.status === "fulfilled") renderTraffic(t.value);
         }
 

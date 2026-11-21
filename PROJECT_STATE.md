@@ -68,6 +68,10 @@ quote / discovery / scanner noise, with a paywall funnel joined to LND
 invoices), then revenue. Data: `/api/proxy/health`, `/api/proxy/traffic`
 (`ops_monitor.py`), `/api/proxy/stats`.
 
+The Node API tile says **Unreachable** only when the server reports LND down (HTTP 502).
+If the browser loses the server (SSH tunnel closed, laptop asleep), it shows **Unknown**
+and a banner saying the figures are not live; a 401 says to reload and sign in again.
+
 ## Stale gate (never take payment for stale data)
 
 `jobs.feed_degraded()`: a feed is stale when its newest stored snapshot is older
@@ -212,6 +216,10 @@ unreachable old commits by ID until GitHub Support clears them.
 
 ## Known gaps
 
+- **Pending (owner, after the build is finished): dashboard access without the
+  SSH tunnel**, e.g. from a phone. Options discussed 2026-11-21: Tailscale (private,
+  free, recommended) or a public `/ops/` path behind the password with lockout.
+
 - Revenue: 0 settled L402 invoices as of 2026-11-11 (`RESEARCH.md` §1). In the
   7 days to 2026-11-11 the public traffic was ~3,900 scanner requests and 2
   real discovery hits (`/openapi.json`); no real API calls.
@@ -226,7 +234,7 @@ unreachable old commits by ID until GitHub Support clears them.
 
     /home/ubuntu/miniconda/envs/auragrid_env/bin/python -m unittest discover -s tests -t .
 
-118 offline tests (no LND, Aperture or network needed). Live checks:
+121 offline tests (no LND, Aperture or network needed). Live checks:
 `python eia_grid_feed.py --check`, `python fetcher.py --once`,
 `python verify_deployment.py --base https://84.12.79.124 --ip 84.12.79.124`
 (43 PASS, 0 WARN, 0 FAIL on 2026-11-19, run on the server; a stale paid feed

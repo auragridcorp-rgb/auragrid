@@ -3,6 +3,14 @@
 AurAgrid's pivot to a lean, free-tier L402 data oracle (plan: `RESEARCH.md`;
 current state: `PROJECT_STATE.md`). Newest first.
 
+## 2026-11-21: dashboard status fix, listings
+
+- **Dashboard:** "Node API: Unreachable" appeared whenever the browser lost the server
+  (closed SSH tunnel), although LND was fine. Failures are now classified: lost
+  connection -> "Unknown" plus a "not live" banner; 401 -> sign in again; only a 502
+  (LND down) -> "Unreachable"; an unsynced node shows "Syncing".
+- Listed on Glama (rated B) and awesome-mcp-servers PR #20232; MIT LICENSE added.
+
 ## 2026-11-19: machine discovery (CLAUDE_CODE_PROMPT_MACHINE_DISCOVERY.md)
 
 - **Stale gate:** a paid feed past its stale limit answers 503 (`stale`, true
