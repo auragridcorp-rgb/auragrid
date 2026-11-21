@@ -127,6 +127,32 @@ class GridCarbonTests(unittest.TestCase):
         self.assertAlmostEqual(r["data"]["lower48"]["g_co2_per_kwh"], round(0.96 * derived.LB_TO_G, 1))
 
 
+class GridCarbonFreshnessTests(unittest.TestCase):
+    def test_grid_carbon_is_as_fresh_as_the_mix(self):
+        from datetime import datetime, timezone
+        c = Clocked()
+        hour = lambda h: datetime.fromtimestamp(NOW - h * 3600, timezone.utc).strftime("%Y-%m-%dT%H")  # noqa: E731
+        for lag, stale in ((30, False), (40, True)):
+            c.save("energy/grid", {"lower48": {"period_utc": hour(lag), "generation_by_fuel_mwh": {"NG": 10.0}},
+                                   "regions": [], "realtime": {"period_utc": hour(0)}}, "g%d" % lag, NOW - 60)
+            r = derived.grid_carbon(c.store, clock=lambda: NOW)
+            self.assertEqual(r["stale"], stale, lag)
+            self.assertEqual(r["provenance"]["inputs"][0]["as_of"], hour(lag))
+
+    def test_energy_snapshot_uses_realtime_demand(self):
+        c = Clocked()
+        c.save("energy/grid", {"lower48": {"period_utc": "2026-01-01T00", "demand_mwh": 1, "renewable_share_pct": 40.0},
+                               "generation_mix_lag_hours": 30,
+                               "realtime": {"lower48": {"period_utc": "2026-01-02T06", "demand_mwh": 2}}}, "g", NOW - 60)
+        c.save("spr-stockpile", {"spr": {}}, "s", NOW - 60)
+        c.save("lng-supply-chain", {"us_total": {}, "period": "p"}, "l", NOW - 60)
+        e = derived.energy_snapshot(c.store, clock=lambda: NOW)["data"]["electricity_lower48"]
+        self.assertEqual((e["period_utc"], e["demand_mwh"]), ("2026-01-02T06", 2))
+        self.assertEqual(e["generation_mix"], {"period_utc": "2026-01-01T00", "lag_hours": 30,
+                                               "renewable_share_pct": 40.0, "carbon_free_share_pct": None,
+                                               "fossil_share_pct": None})
+
+
 class EnergySnapshotTests(unittest.TestCase):
     def test_parts_keep_their_own_freshness(self):
         c = Clocked()

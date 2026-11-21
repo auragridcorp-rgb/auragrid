@@ -223,17 +223,23 @@ def energy_snapshot(store, clock=time.time) -> dict:
     _, spr, s_info = _input(store, "spr-stockpile", clock)
     _, lng, l_info = _input(store, "lng-supply-chain", clock)
     l48 = grid.get("lower48") or {}
+    rt = (grid.get("realtime") or {}).get("lower48") or l48   # older snapshots have no realtime block
     data = {
-        "electricity_lower48": {k: l48.get(k) for k in ("period_utc", "demand_mwh", "demand_forecast_mwh",
-                                                        "net_generation_mwh", "renewable_share_pct",
-                                                        "carbon_free_share_pct", "fossil_share_pct")},
+        "electricity_lower48": {
+            **{k: rt.get(k) for k in ("period_utc", "demand_mwh", "net_generation_mwh")},
+            "generation_mix": {"period_utc": l48.get("period_utc"),
+                               "lag_hours": grid.get("generation_mix_lag_hours"),
+                               **{k: l48.get(k) for k in ("renewable_share_pct", "carbon_free_share_pct",
+                                                          "fossil_share_pct")}},
+        },
         "crude_stocks": {k: spr.get(k) for k in ("spr", "commercial_crude", "total_crude_incl_spr")},
         "lng_exports": {"period": lng.get("period"), **(lng.get("us_total") or {})},
         "parts": {"electricity_lower48": g_info, "crude_stocks": s_info, "lng_exports": l_info},
     }
-    derivation = ("No new numbers: the Lower-48 summary of energy/grid, the SPR/commercial/total crude summaries "
-                  "of spr-stockpile and the U.S. totals of lng-supply-chain, side by side, each with its own as_of "
-                  "and stale flag (data.parts).")
+    derivation = ("No new numbers: the Lower-48 summary of energy/grid (demand and net generation at EIA's newest "
+                  "hour; generation-mix shares at EIA's newest fuel-type hour, which lags, see generation_mix), the "
+                  "SPR/commercial/total crude summaries of spr-stockpile and the U.S. totals of lng-supply-chain, side "
+                  "by side, each with its own as_of and stale flag (data.parts).")
     return _result("derived/energy-snapshot", data, [g_info, s_info, l_info], derivation,
                    source="Combined by AurAgrid from U.S. Energy Information Administration data",
                    credit=EIA_CREDIT)
@@ -266,9 +272,27 @@ def _intensity(mix: dict) -> dict:
             **({"fuels_assumed_zero_co2": unknown} if unknown else {})}
 
 
+MIX_STALE_HOURS = 36   # EIA's fuel-type hour usually lags 12-36 h; beyond that grid-carbon is marked stale
+
+
+def _mix_info(g_info: dict, mix_period: Optional[str], clock) -> dict:
+    """g_info, re-based on the generation-mix hour: grid-carbon is only as fresh as the mix."""
+    if not mix_period:
+        return g_info
+    try:
+        hour = datetime.strptime(mix_period, "%Y-%m-%dT%H").replace(tzinfo=timezone.utc).timestamp()
+    except ValueError:
+        return g_info
+    age = clock() - hour
+    return {**g_info, "as_of": mix_period, "mix_age_seconds": round(age),
+            "mix_stale_after_seconds": MIX_STALE_HOURS * 3600,
+            "stale": bool(g_info.get("stale")) or age > MIX_STALE_HOURS * 3600}
+
+
 def grid_carbon(store, clock=time.time) -> dict:
     _, grid, g_info = _input(store, "energy/grid", clock)
     l48 = grid.get("lower48") or {}
+    g_info = _mix_info(g_info, l48.get("period_utc"), clock)
     regions = []
     for r in grid.get("regions", []):
         regions.append({"respondent": r.get("respondent"), "name": r.get("name"), "kind": r.get("kind"),
