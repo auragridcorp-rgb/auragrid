@@ -9,6 +9,8 @@ current state: `PROJECT_STATE.md`). Newest first.
   (closed SSH tunnel), although LND was fine. Failures are now classified: lost
   connection -> "Unknown" plus a "not live" banner; 401 -> sign in again; only a 502
   (LND down) -> "Unreachable"; an unsynced node shows "Syncing".
+- **Phase 8 test purchase done** (owner self-test, 1.006-sat fee): invoice settled, paid
+  feed served and signed, ledger attributed it to `btc-fees` hourly. Not customer revenue.
 - Listed on Glama (rated B) and awesome-mcp-servers PR #20232; MIT LICENSE added.
 
 ## 2026-11-19: machine discovery (CLAUDE_CODE_PROMPT_MACHINE_DISCOVERY.md)
