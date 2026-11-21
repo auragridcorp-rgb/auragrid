@@ -21,6 +21,7 @@ ignored in totals.
 import logging
 import os
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 import requests
 
@@ -30,6 +31,7 @@ import feeds
 log = logging.getLogger("auragrid.eia_grid")
 
 HOURS_BACK = 8   # hours before EIA's newest fuel-mix hour (slower BAs report a few hours later)
+REALTIME_HOURS_BACK = 4   # hours before region-data's newest Lower-48 hour (some regions report later)
 RENEWABLE = {"WAT", "SUN", "WND", "GEO"}
 NUCLEAR = {"NUC"}
 FOSSIL = {"COL", "NG", "OIL"}
@@ -38,6 +40,9 @@ US48 = "US48"
 EIA_REGIONS = {"CAL", "CAR", "CENT", "FLA", "MIDA", "MIDW", "NE", "NY", "NW", "SE", "SW", "TEN", "TEX"}
 REGION_TYPES = {"D": "demand_mwh", "DF": "demand_forecast_mwh", "NG": "net_generation_mwh",
                 "TI": "interchange_mwh"}
+# Measured values only: on 2026-11-21 the day-ahead forecast (DF) for recent hours was reported by
+# only some balancing authorities, so EIA's regional and U.S. sums were far too low.
+REALTIME_TYPES = {"D": "demand_mwh", "NG": "net_generation_mwh", "TI": "interchange_mwh"}
 
 
 def _num(value):
@@ -51,7 +56,67 @@ def _pct(part, whole):
     return round(part / whole * 100, 1) if whole else None
 
 
-def build_snapshot(region_rows: list, fuel_rows: list) -> dict:
+def _hour(period: str) -> datetime:
+    return datetime.strptime(period, "%Y-%m-%dT%H").replace(tzinfo=timezone.utc)
+
+
+def _reporting(by: dict, period: str, code: str) -> int:
+    """How many of EIA's 13 regions reported `code` for `period`."""
+    return sum(1 for resp in EIA_REGIONS if code in by.get(resp, {}).get(period, {}))
+
+
+def build_realtime(rows: list) -> Optional[dict]:
+    """Newest complete hour of measured demand / net generation / interchange (no forecasts).
+
+    EIA publishes these within about an hour (region-data), while the fuel mix can lag a day
+    or more, so they are reported separately, each region at its own newest hour of actual
+    demand. Net generation and interchange are filled only when EIA has them for that same
+    hour (on 2026-11-21 they lagged with the fuel mix); otherwise they are null, never
+    taken from an older hour."""
+    by = {}
+    names = {}
+    for r in rows:
+        value = _num(r.get("value"))
+        if value is None or r.get("type") not in REALTIME_TYPES:
+            continue
+        resp = r["respondent"]
+        if resp != US48 and resp not in EIA_REGIONS:
+            continue
+        names[resp] = r.get("respondent-name") or names.get(resp)
+        by.setdefault(resp, {}).setdefault(r["period"], {})[r["type"]] = value
+    out = []
+    for resp, periods in by.items():
+        ready = [p for p, v in periods.items() if "D" in v]   # actual demand (DF alone is a forecast)
+        if resp == US48:
+            # EIA's Lower-48 total is the sum of the regions that have reported: only an hour
+            # with all 13 regions' actual demand is a complete total.
+            ready = [p for p in ready if _reporting(by, p, "D") == len(EIA_REGIONS)]
+        if not ready:
+            continue
+        period = max(ready)
+        stats = periods[period]
+        row = {"respondent": resp, "name": names.get(resp),
+               "kind": "lower48" if resp == US48 else "eia_region", "period_utc": period,
+               **{field: stats.get(code) for code, field in REALTIME_TYPES.items()}}
+        if resp == US48:
+            partial = {}
+            for code, field in REALTIME_TYPES.items():
+                n = _reporting(by, period, code)
+                if row[field] is not None and n < len(EIA_REGIONS):
+                    row[field] = None   # a partial sum would understate the U.S. total
+                    partial[field] = "%d of %d regions reported this hour" % (n, len(EIA_REGIONS))
+            if partial:
+                row["incomplete"] = partial
+        out.append(row)
+    lower48 = next((r for r in out if r["kind"] == "lower48"), None)
+    if lower48 is None:
+        return None
+    out.sort(key=lambda r: (r["kind"] != "lower48", r["respondent"]))
+    return {"period_utc": lower48["period_utc"], "lower48": lower48,
+            "regions": [r for r in out if r["kind"] != "lower48"]}
+
+
+def build_snapshot(region_rows: list, fuel_rows: list, realtime_rows: Optional[list] = None) -> dict:
     # respondent -> period -> {fuel: mwh}
     by_fuel, names = {}, {}
     for r in fuel_rows:
@@ -98,11 +163,23 @@ def build_snapshot(region_rows: list, fuel_rows: list) -> dict:
     bas = [r for r in regions if r["kind"] == "balancing_authority" and sum(
         v for f, v in r["generation_by_fuel_mwh"].items() if f not in STORAGE and v > 0) >= 500]
     cleanest = sorted(bas, key=lambda r: -(r["carbon_free_share_pct"] or 0))[:10]
+    realtime = build_realtime(realtime_rows or [])
+    mix_period = (lower48 or {}).get("period_utc")
+    lag = None
+    if realtime and mix_period:
+        lag = round((_hour(realtime["period_utc"]) - _hour(mix_period)).total_seconds() / 3600)
     return {
         "dataset": "AurAgrid U.S. Grid Demand and Generation Mix",
         "frequency": "hourly",
-        "notes": "EIA-930 hourly data; the generation mix can lag real time by 12 hours or more. Each region at its latest "
-                 "reported hour (UTC, hour ending). Shares are of positive net generation excluding storage.",
+        "notes": "EIA-930 hourly data, all hours UTC, hour ending. 'realtime' is the newest hour of measured demand, "
+                 "net generation and interchange (demand usually within about an hour; a U.S. total only when all 13 "
+                 "regions reported, otherwise null with the reason in 'incomplete'). The "
+                 "generation mix ('lower48', 'regions', shares) is EIA's newest fuel-type hour, which lags real time "
+                 "by 12 hours or more: see generation_mix_period_utc and generation_mix_lag_hours. Shares are of "
+                 "positive net generation excluding storage.",
+        "realtime": realtime,
+        "generation_mix_period_utc": mix_period,
+        "generation_mix_lag_hours": lag,
         "lower48": lower48,
         "cleanest_balancing_authorities": [
             {"respondent": r["respondent"], "name": r["name"], "carbon_free_share_pct": r["carbon_free_share_pct"],
@@ -127,7 +204,15 @@ def fetch(session, api_key: str) -> dict:
     region_rows = eia_api.get_rows(session, "electricity/rto/region-data", api_key,
                                    {**common, "facets[type][]": list(REGION_TYPES)})
     fuel_rows = eia_api.get_rows(session, "electricity/rto/fuel-type-data", api_key, common)
-    return build_snapshot(region_rows, fuel_rows)
+    # Current hours of demand / net generation: anchored on the newest hour of actual Lower-48 demand.
+    newest_rt = _hour(eia_api.latest_period(session, "electricity/rto/region-data", api_key,
+                                            {"frequency": "hourly", "facets[respondent][]": US48,
+                                             "facets[type][]": "D"}))   # actual demand: DF runs into the future
+    realtime_rows = eia_api.get_rows(session, "electricity/rto/region-data", api_key, {
+        "frequency": "hourly", "start": (newest_rt - timedelta(hours=REALTIME_HOURS_BACK)).strftime("%Y-%m-%dT%H"),
+        "sort[0][column]": "period", "sort[0][direction]": "desc",
+        "facets[type][]": list(REALTIME_TYPES), "facets[respondent][]": sorted(EIA_REGIONS | {US48})})
+    return build_snapshot(region_rows, fuel_rows, realtime_rows)
 
 
 feeds.describe(
@@ -135,7 +220,10 @@ feeds.describe(
     url="https://api.eia.gov/v2/electricity/rto/", terms_url="https://www.eia.gov/about/copyrights_reuse.php",
     attribution="Source: U.S. Energy Information Administration. Public domain; EIA does not endorse AurAgrid.",
     license='U.S. government work, public domain; credit the U.S. Energy Information Administration',
-    as_of=lambda snap: (snap.get("lower48") or {}).get("period_utc") or max(r["period_utc"] for r in snap["regions"]))
+    # The feed is as fresh as its newest hour (realtime demand); the mix carries its own hour and lag.
+    as_of=lambda snap: ((snap.get("realtime") or {}).get("period_utc")
+                        or (snap.get("lower48") or {}).get("period_utc")
+                        or max(r["period_utc"] for r in snap["regions"])))
 
 
 def register_from_env() -> bool:

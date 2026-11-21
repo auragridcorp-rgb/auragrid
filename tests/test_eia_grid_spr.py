@@ -98,6 +98,43 @@ class FakeResp:
         pass
 
 
+class RealtimeTests(unittest.TestCase):
+    REGIONS = sorted(grid.EIA_REGIONS)
+
+    def rows(self, hour, typ, regions, value=10.0):
+        out = [region(r, hour, typ, value) for r in regions]
+        out.append(region("US48", hour, typ, value * len(regions)))
+        return out
+
+    def test_us_total_only_when_all_13_regions_reported(self):
+        rows = (self.rows("2026-11-21T09", "D", self.REGIONS) + self.rows("2026-11-21T10", "D", self.REGIONS[:12])
+                + self.rows("2026-11-21T09", "NG", self.REGIONS[:6]))
+        rt = grid.build_realtime(rows)
+        self.assertEqual(rt["period_utc"], "2026-11-21T09")   # 10:00 lacks one region's demand
+        self.assertEqual(rt["lower48"]["demand_mwh"], 130.0)
+        self.assertIsNone(rt["lower48"]["net_generation_mwh"])  # partial sum withheld
+        self.assertIn("6 of 13", rt["lower48"]["incomplete"]["net_generation_mwh"])
+        cal = next(r for r in rt["regions"] if r["respondent"] == "CAL")
+        self.assertEqual(cal["period_utc"], "2026-11-21T10")    # each region at its own newest hour
+
+    def test_forecasts_are_never_realtime(self):
+        rows = self.rows("2026-11-22T08", "DF", self.REGIONS) + self.rows("2026-11-21T10", "D", self.REGIONS)
+        rt = grid.build_realtime(rows)
+        self.assertEqual(rt["period_utc"], "2026-11-21T10")
+        self.assertNotIn("demand_forecast_mwh", rt["lower48"])
+
+    def test_feed_as_of_follows_realtime_and_reports_mix_lag(self):
+        import feeds
+        r, f = GridTests().rows()
+        snap = grid.build_snapshot(r, f, self.rows("2026-10-31T18", "D", self.REGIONS))
+        self.assertEqual(feeds.as_of_for("energy/grid", snap), "2026-10-31T18")
+        self.assertEqual(snap["generation_mix_period_utc"], "2026-10-30T12")
+        self.assertEqual(snap["generation_mix_lag_hours"], 30)
+        old = grid.build_snapshot(r, f)                      # no realtime rows: as before
+        self.assertIsNone(old["realtime"])
+        self.assertEqual(feeds.as_of_for("energy/grid", old), "2026-10-30T12")
+
+
 class EiaClientTests(unittest.TestCase):
     def test_paging_and_errors(self):
         pages = [{"response": {"total": 6000, "data": [{"i": i} for i in range(5000)]}},
@@ -138,8 +175,14 @@ class EiaClientTests(unittest.TestCase):
         snap = grid.fetch(S(), "k")
         self.assertEqual(snap["lower48"]["period_utc"], "2026-10-31T06")
         self.assertEqual(snap["lower48"]["demand_mwh"], 140)
-        starts = {p["start"] for _, p in calls if "start" in p}
-        self.assertEqual(starts, {"2026-10-30T22"})
+        mix = {p["start"] for _, p in calls if "start" in p and "facets[respondent][]" not in p}
+        self.assertEqual(mix, {"2026-10-30T22"})
+        # the realtime query has its own window: 4 h before the newest hour of actual demand
+        rt = [p for _, p in calls if "start" in p and "facets[respondent][]" in p]
+        self.assertEqual([p["start"] for p in rt], ["2026-10-31T02"])
+        self.assertNotIn("DF", rt[0]["facets[type][]"])
+        anchor = [p for _, p in calls if p["length"] == 1 and "region-data" in _]
+        self.assertTrue(anchor and anchor[0]["facets[type][]"] == "D")
 
     def test_not_registered_without_key(self):
         os.environ.pop("EIA_API_KEY", None)

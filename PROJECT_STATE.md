@@ -130,7 +130,7 @@ the setting.
 | `/api/v1/bundle/{btc-fees,ln-network}` | paid, 5,000 sats / 30 days (static) | both | - |
 | `/api/v1/batch/btc-fees-delayed` | free | own bitcoind, ≥10 min old | - |
 | `/api/v1/batch/ln-network-daily` | free | own LND, previous UTC day | daily |
-| `/api/v1/energy/grid` | free | EIA-930 hourly grid mix (fuel mix lags ~12 h) | 15 min |
+| `/api/v1/energy/grid` | free | EIA-930: `realtime` = newest hour of measured demand (and net generation / interchange when EIA has them; U.S. total only when all 13 regions reported); generation mix at its own hour, `generation_mix_lag_hours` (12-36 h behind). `as_of` follows `realtime` | 15 min |
 | `/api/v1/batch/spr-stockpile` | free | EIA weekly petroleum stocks | 6 h |
 | `/api/v1/batch/lng-supply-chain` | free | EIA monthly LNG exports | 12 h |
 | `/api/v1/batch/earthquakes` | free | USGS GeoJSON | 10 min |
@@ -244,7 +244,7 @@ unreachable old commits by ID until GitHub Support clears them.
 
     /home/ubuntu/miniconda/envs/auragrid_env/bin/python -m unittest discover -s tests -t .
 
-121 offline tests (no LND, Aperture or network needed). Live checks:
+126 offline tests (no LND, Aperture or network needed). Live checks:
 `python eia_grid_feed.py --check`, `python fetcher.py --once`,
 `python verify_deployment.py --base https://84.12.79.124 --ip 84.12.79.124`
 (43 PASS, 0 WARN, 0 FAIL on 2026-11-19, run on the server; a stale paid feed

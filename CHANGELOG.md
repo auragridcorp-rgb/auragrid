@@ -5,6 +5,17 @@ current state: `PROJECT_STATE.md`). Newest first.
 
 ## 2026-11-21: dashboard status fix, listings
 
+- **energy/grid fresh again.** EIA's fuel mix, net generation and interchange were 30 h
+  behind while measured demand was current, and the feed was dated by the fuel mix. New
+  `realtime` block (measured demand at EIA's newest hour; Lower-48 totals only when all 13
+  regions reported, otherwise null with the reason; forecasts excluded, since recent-hour
+  forecasts were partial sums) dates the feed; the mix keeps its own hour and
+  `generation_mix_lag_hours`. `grid-carbon` is dated by the mix and goes stale past 36 h;
+  `energy-snapshot` shows current demand next to the mix shares at their hour.
+- `verify_deployment.py` had been replaced at 08:25 by an old-catalog version (swept into
+  commit d7ae187); restored to 72a0d06 (43 PASS, 0 WARN, 0 FAIL). The replaced copy is in
+  `~/AurAgrid.bak-20261119-1241/verify_deployment.py.replaced-20261121-0825`.
+
 - **Dashboard:** "Node API: Unreachable" appeared whenever the browser lost the server
   (closed SSH tunnel), although LND was fine. Failures are now classified: lost
   connection -> "Unknown" plus a "not live" banner; 401 -> sign in again; only a 502
