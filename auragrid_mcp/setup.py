@@ -15,7 +15,7 @@ setup(
     entry_points={"console_scripts": ["auragrid-mcp=auragrid_mcp.server:main"]},
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: Other/Proprietary License",
+        "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
 )
