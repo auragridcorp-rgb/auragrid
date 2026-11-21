@@ -13,9 +13,9 @@ truthful text from verified facts, nothing posted to communities without Joshua'
 | [PyPI](https://pypi.org/project/auragrid-mcp/0.3.0/) | `auragrid-mcp` 0.3.0 | 2026-11-19 | **Live** | Project-scoped token (Joshua); yank a release from the PyPI project page |
 | [Official MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.auragridcorp-rgb/auragrid) | `io.github.auragridcorp-rgb/auragrid` 0.3.0 | 2026-11-19 | **Live** | `mcp-publisher publish` with a new version in server.json (login: GitHub device flow as auragridcorp-rgb); status changes via `mcp-publisher status` |
 | PulseMCP | — | — | Automatic | Copies the Official MCP Registry (its own submissions are paused) |
-| Glama | `auragridcorp-rgb/auragrid` | — | **Next: Joshua** | Required by the awesome-list bot. "Add Server" at glama.ai/mcp/servers with your GitHub login; paste `auragrid_mcp/Dockerfile` into its Dockerfile field. `glama.json` (repo root) claims ownership. Server verified to start and list tools with no network |
+| [Glama](https://glama.ai/mcp/servers/auragridcorp-rgb/auragrid) | `auragridcorp-rgb/auragrid` | 2026-11-21 (first try rejected: no LICENSE; MIT added) | **Listed, rated B**; not in search until claimed + Dockerfile checks pass | Claim via the server page's admin settings (GitHub login), then paste `auragrid_mcp/Dockerfile` in its admin page |
 | Smithery | — | — | Not possible | Stopped accepting listings (now part of Arcade) |
-| [punkpeye/awesome-mcp-servers](https://github.com/punkpeye/awesome-mcp-servers/pull/20232) | PR #20232, Finance & Fintech | 2026-11-21 | **Open** (1 line, mergeable; Glama badge added) | Fork `auragridcorp-rgb/awesome-mcp-servers`; the server's SSH key can push to it. Waits for the Glama listing; title still lacks 🤖🤖🤖 (needs the web UI or an API token) |
+| [punkpeye/awesome-mcp-servers](https://github.com/punkpeye/awesome-mcp-servers/pull/20232) | PR #20232, Finance & Fintech | 2026-11-21 | **Open** (1 line, mergeable; Glama badge shows B; title has 🤖🤖🤖) | Fork `auragridcorp-rgb/awesome-mcp-servers`; the server's SSH key can push to it. Awaiting maintainer merge |
 | x402 Bazaar / agentic.market | — | — | Waits for decision point 2 | Only once x402 exists (`X402_PLAN.md`) |
 | LangChain | `langchain-auragrid` 0.2.0 | 2026-11-11 | Public on GitHub | Not on PyPI; publish needs your token |
 
