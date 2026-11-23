@@ -15,6 +15,7 @@ rotated .1.gz, when the file is rotated or truncated) and keeps per-day
 aggregates for a rolling window. Status codes are not in the log, so the
 paywall funnel joins paid-route requests with LND invoices in app/main.py.
 """
+import glob
 import gzip
 import os
 import re
@@ -208,6 +209,21 @@ class TrafficLog:
             self.recent.append({"time": day + " " + hms, "ip": ip, "method": method,
                                 "path": path[:200], "category": cat, "user_agent": ua[:160]})
 
+    def _rotated_files(self, cutoff):
+        """Rotated logs (<path>.N.gz) that can hold days >= cutoff, oldest first.
+
+        Aperture numbers its rotations upwards (.1.gz is the OLDEST), so files are ordered by
+        modification time, not by number; a file last written before the cutoff day is skipped."""
+        found = []
+        for name in glob.glob(glob.escape(self.path) + ".*.gz"):
+            try:
+                mtime = os.stat(name).st_mtime
+            except OSError:
+                continue
+            if datetime.fromtimestamp(mtime, timezone.utc).strftime("%Y-%m-%d") >= cutoff:
+                found.append((mtime, name))
+        return [name for _, name in sorted(found)]
+
     def refresh(self, force=False):
         with self._lock:
             if not force and self.clock() - self.last_refresh < self.min_interval:
@@ -226,8 +242,7 @@ class TrafficLog:
                 self._reset()
                 self.last_refresh = self.clock()
                 self.inode = st.st_ino
-                rotated = self.path + ".1.gz"
-                if os.path.exists(rotated):
+                for rotated in self._rotated_files(cutoff):
                     try:
                         with gzip.open(rotated, "rt", errors="replace") as f:
                             for line in f:

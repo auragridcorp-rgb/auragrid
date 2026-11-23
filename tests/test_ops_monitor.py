@@ -76,6 +76,25 @@ class TrafficLogTests(unittest.TestCase):
         self.assertEqual(s["totals"]["paid"], 1)
 
 
+    def test_rotation_follows_apertures_upward_numbering(self):
+        # Aperture numbers rotations upwards: .1.gz is the OLDEST. The newest rotated file
+        # (.2.gz here) must be read, and a file last written before the window skipped.
+        log = self.make(line("2026-11-11", "1.1.1.1", "/llms.txt"))
+        log.summary(7)
+        with gzip.open(self.path + ".1.gz", "wt") as f:
+            f.write(line("2026-10-01", "7.7.7.7", "/llms.txt"))
+        old = datetime(2026, 10, 1, tzinfo=timezone.utc).timestamp()
+        os.utime(self.path + ".1.gz", (old, old))
+        with gzip.open(self.path + ".2.gz", "wt") as f:
+            f.write(line("2026-11-09", "8.8.8.8", "/llms.txt") + line("2026-11-10", "9.9.9.8", "/llms.txt"))
+        os.remove(self.path)
+        with open(self.path, "w") as f:
+            f.write(line("2026-11-11", "6.6.6.6", "/api/v1/batch/btc-fees"))
+        s = log.summary(7)
+        self.assertEqual(s["totals"]["discovery"], 2)
+        self.assertEqual(s["totals"]["paid"], 1)
+        self.assertEqual(log._rotated_files("2026-11-05"), [self.path + ".2.gz"])
+
 class ClassifyAndRouteTests(unittest.TestCase):
     def test_classify_path(self):
         c = t.backend.classify_path
