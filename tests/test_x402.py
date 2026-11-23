@@ -168,6 +168,12 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(rail.challenge("/x402/v1/batch/ln-network")[1]["accepts"][0]["amount"], "4000")
         self.assertEqual(rail.fac.calls, [])
 
+    def test_resource_is_the_public_url(self):
+        cfg = x402_rail.Config(pay_to=PAY_TO, facilitator_url="https://f.example", prices={"btc-fees": 0.002},
+                               public_url="https://84.12.79.124")
+        _, req = Rail(cfg=cfg).challenge()
+        self.assertEqual(req["resource"]["url"], "https://84.12.79.124/x402/v1/batch/btc-fees")
+
     def test_stale_feed_asks_for_no_payment(self):
         rail = Rail()
         rail.stale.add("btc-fees")

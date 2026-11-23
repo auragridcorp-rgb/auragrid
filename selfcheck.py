@@ -7,6 +7,7 @@ From the PUBLIC URL, the way a directory or an agent sees AurAgrid:
   /.well-known/l402-services, /status.json, /robots.txt);
 - every free endpoint and free sample answers 200 with an as_of (stale is a WARN);
 - every paid endpoint answers a 402 L402 challenge (the invoice is never paid);
+- every advertised x402 endpoint answers 402 with PAYMENT-REQUIRED (never paid);
 - the TLS certificate has at least 3 days left;
 - every listing in LISTINGS_TO_CHECK still resolves.
 Writes one line per check to --out (replaced each run) and exits 1 if anything FAILed.
@@ -119,6 +120,24 @@ def check_endpoints(s, base, manifest, rep):
             rep.add("FAIL", label, str(exc)[:120])
 
 
+def check_x402(s, base, manifest, rep):
+    """Each advertised x402 endpoint answers 402 with a PAYMENT-REQUIRED header (never paid)."""
+    for e in (manifest.get("x402") or {}).get("endpoints", []):
+        time.sleep(PACE_SECONDS)
+        path = urlparse(e["url"]).path
+        label = "x402 challenge " + path.rsplit("/", 1)[-1]
+        try:
+            r = get(s, base + path)
+            if r.status_code == 402 and r.headers.get("payment-required"):
+                rep.add("PASS", label)
+            elif r.status_code == 503:
+                rep.add("WARN", label, "503 stale: no payment requested")
+            else:
+                rep.add("FAIL", label, "HTTP %d" % r.status_code)
+        except Exception as exc:
+            rep.add("FAIL", label, str(exc)[:120])
+
+
 def check_data(s, base, path, label, params, rep):
     r = get(s, base + path, params=params)
     if r.status_code == 429:
@@ -174,6 +193,7 @@ def main(argv=None) -> int:
     rep = Report()
     manifest = check_discovery(s, base, rep)
     check_endpoints(s, base, manifest, rep)
+    check_x402(s, base, manifest, rep)
     check_tls(base, rep)
     check_listings(s, rep)
     c = rep.counts()

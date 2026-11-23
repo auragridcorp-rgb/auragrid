@@ -46,6 +46,7 @@ class Config:
     prices: dict = field(default_factory=dict)   # feed key (e.g. "btc-fees") -> USD per request
     batch_prefix: str = "batch"
     cdp_key_file: Optional[str] = None           # Coinbase CDP API key JSON (never logged)
+    public_url: str = ""                         # e.g. https://84.12.79.124 (the URL buyers see)
 
     def path(self, key: str) -> str:
         return "%s%s/%s" % (PREFIX, self.batch_prefix, key)
@@ -54,7 +55,7 @@ class Config:
         return "$%s" % format(self.prices[key], "f").rstrip("0").rstrip(".")
 
 
-def load_config(prices: dict, env=os.environ, batch_prefix: str = "batch") -> Optional[Config]:
+def load_config(prices: dict, env=os.environ, batch_prefix: str = "batch", public_url: str = "") -> Optional[Config]:
     """The x402 config, or None (rail off) when anything required is missing or malformed."""
     pay_to = (env.get("AURAGRID_X402_PAY_TO") or "").strip()
     url = (env.get("AURAGRID_X402_FACILITATOR_URL") or "").strip().rstrip("/")
@@ -91,7 +92,7 @@ def load_config(prices: dict, env=os.environ, batch_prefix: str = "batch") -> Op
         log.error("x402 rail OFF: %s", "; ".join(problems))
         return None
     return Config(pay_to=pay_to, facilitator_url=url, network=network, prices=clean, batch_prefix=batch_prefix,
-                  cdp_key_file=cdp_key_file)
+                  cdp_key_file=cdp_key_file, public_url=(public_url or "").rstrip("/"))
 
 
 CDP_FACILITATOR_URL = "https://api.cdp.coinbase.com/platform/v2/x402"
@@ -129,6 +130,8 @@ def routes_config(cfg: Config, describe: Callable[[str], dict]) -> dict:
             "accepts": {"scheme": "exact", "payTo": cfg.pay_to, "price": cfg.price_str(key),
                         "network": cfg.network},
             "description": (info.get("description") or info.get("name") or key)[:500],
+            # the public URL: behind Aperture the request URL is the loopback backend's
+            **({"resource": cfg.public_url + cfg.path(key)} if cfg.public_url else {}),
             "mimeType": "application/json",
         }
     return routes

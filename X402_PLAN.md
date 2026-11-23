@@ -1,10 +1,14 @@
 # x402 as a second payment rail: plan for Joshua (decision point 2)
 
-Status (2026-11-23): **built, tested and deployed, switched OFF.** `x402_rail.py` serves
-`/x402/v1/batch/<feed>` (USDC on Base, `exact` scheme, per-request prices from `pricing.yaml x402:`:
-btc-fees $0.002, ln-network $0.004). Stale feeds answer 503 before any payment is asked; settlement
-happens only after a 2xx; settlements go to the ledger (`x402_payments`, keyed by transaction hash).
-Until the owner provides a receiving address and a facilitator, `/x402/...` answers 404 "not enabled".
+Status (2026-11-23): **LIVE.** `/x402/v1/batch/btc-fees` ($0.002/request) and
+`/x402/v1/batch/ln-network` ($0.004), USDC on Base (eip155:8453), paid straight to the owner's
+address below. Facilitator: **PayAI** (`https://facilitator.payai.network`, no account or API key;
+first 1,000 settlements free, then paid credits). Coinbase CDP was the first choice, but its sign-up
+SMS code never reached the owner's Ugandan number; the CDP key-file path stays supported
+(`AURAGRID_X402_CDP_KEY_FILE`). Fallback with no fee at all: Dexter (`https://x402.dexter.cash`), a
+one-line change. A facilitator never holds funds: buyers sign a transfer to our address and it only
+submits it. Stale feeds answer 503 before any payment is asked; settlement only after a 2xx; the
+ledger keeps one row per transaction (`x402_payments`). No real payment has been made yet.
 Library: `x402[evm]==2.27.0` (`requirements-x402.txt`; FastAPI deliberately not upgraded).
 
 Receiving address (owner, 2026-11-23, self-custody, checksum verified, a plain wallet on Base):

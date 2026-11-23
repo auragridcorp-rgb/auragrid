@@ -216,8 +216,7 @@ unreachable old commits by ID until GitHub Support clears them.
 
 ## x402 (second payment rail)
 
-Built and deployed 2026-11-23, **off** until `AURAGRID_X402_PAY_TO` and
-`AURAGRID_X402_FACILITATOR_URL` are set: see `X402_PLAN.md` (status + owner steps). Per-request
+**Live since 2026-11-23** (PayAI facilitator, owner's Base address): see `X402_PLAN.md`. Per-request
 prices in `pricing.yaml x402:`; rollback: unset the two variables and restart `auragrid-api`.
 
 ## Known gaps

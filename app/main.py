@@ -1139,7 +1139,7 @@ def _x402_prices(path: str = PRICING_CONFIG) -> dict:
 
 
 _X402_NAMES = {feed_key(slug): name for slug, name, _, _ in PAID_CATALOG}
-X402 = x402_rail.load_config(_x402_prices(), batch_prefix=BATCH_PREFIX)
+X402 = x402_rail.load_config(_x402_prices(), batch_prefix=BATCH_PREFIX, public_url=PUBLIC_URL)
 x402_rail.install(
     app, X402,
     describe=lambda key: {"name": _X402_NAMES.get(key, key)},

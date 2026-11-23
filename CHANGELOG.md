@@ -3,7 +3,12 @@
 AurAgrid's pivot to a lean, free-tier L402 data oracle (plan: `RESEARCH.md`;
 current state: `PROJECT_STATE.md`). Newest first.
 
-## 2026-11-23: x402 rail (off until configured), dashboard traffic history
+## 2026-11-23: x402 rail LIVE, dashboard traffic history
+
+- **x402 switched on** with the owner's Base address and the PayAI facilitator (no account; CDP's
+  SMS verification failed for a Ugandan number). Payment requests carry the public resource URL.
+  The weekly self-check now checks the x402 challenges. Env in `~/.bashrc`
+  (backup `~/.bashrc.bak-20261123-x402`); rollback: remove the two `AURAGRID_X402_*` lines, restart API.
 
 - **x402** (`x402_rail.py`, `tests/test_x402.py`): `/x402/v1/batch/btc-fees` ($0.002/request) and
   `ln-network` ($0.004), USDC on Base. Stale gate before payment, settle only after 2xx, ledger table
