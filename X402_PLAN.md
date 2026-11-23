@@ -13,11 +13,14 @@ Receiving address (owner, 2026-11-23, self-custody, checksum verified, a plain w
 To switch it on (owner):
 1. ~~A receiving address~~ done. A receiving address on Base you control (self-custody wallet, or a Coinbase account's Base
    USDC address). Public address only: never give the server a private key or seed.
-2. A facilitator for **mainnet**. x402.org's free one settles testnet only (the config refuses it on
-   mainnet). Coinbase CDP: free account + API key (first 1,000 settlements a month free, then
-   $0.001 each); its per-request auth needs `cdp-sdk`, added when the key exists.
+2. A facilitator for **mainnet**: Coinbase CDP. Create a free account and a Secret API key at
+   portal.cdp.coinbase.com, download its JSON and put it on the server as
+   `~/.auragrid/cdp_api_key.json` (chmod 600; never paste it in chat). The rail reads it via
+   `cdp-sdk` and uses `https://api.cdp.coinbase.com/platform/v2/x402`. (x402.org's free
+   facilitator settles testnet only; the config refuses it on mainnet.)
 3. Add to `~/.bashrc` (read by `scripts/run_backend.sh`), then restart `auragrid-api`:
-   `export AURAGRID_X402_PAY_TO=0x...` and `export AURAGRID_X402_FACILITATOR_URL=https://...`
+   `export AURAGRID_X402_PAY_TO=0x1e2c1E4BA923BD3612e43e4b82E22dD299626b6B` and
+   `export AURAGRID_X402_CDP_KEY_FILE=/home/ubuntu/.auragrid/cdp_api_key.json`
 4. One real $0.002 test payment from a separate wallet, then the manifest and llms.txt advertise x402
    automatically, and the route can be listed in x402 Bazaar / x402scan / 402 Index.
 

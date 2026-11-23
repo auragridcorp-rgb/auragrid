@@ -103,6 +103,49 @@ class ConfigTests(unittest.TestCase):
                                                        "AURAGRID_X402_NETWORK": "eip155:84532"})
         self.assertIsNotNone(test)
 
+    def test_cdp_key_file(self):
+        d = tempfile.mkdtemp()
+        path = os.path.join(d, "cdp.json")
+        with open(path, "w") as fh:
+            json.dump({"id": "key-id", "privateKey": "secret"}, fh)
+        os.chmod(path, 0o644)
+        env = {"AURAGRID_X402_PAY_TO": PAY_TO, "AURAGRID_X402_CDP_KEY_FILE": path}
+        self.assertIsNone(x402_rail.load_config(self.PRICES, env=env))      # readable by others: refused
+        os.chmod(path, 0o600)
+        cfg = x402_rail.load_config(self.PRICES, env=env)
+        self.assertEqual(cfg.facilitator_url, x402_rail.CDP_FACILITATOR_URL)
+        self.assertEqual(x402_rail.cdp_credentials(path), ("key-id", "secret"))
+        with open(path, "w") as fh:
+            json.dump({"name": "organizations/x/apiKeys/y"}, fh)           # no secret
+        self.assertIsNone(x402_rail.load_config(self.PRICES, env=env))
+        self.assertIsNone(x402_rail.load_config(self.PRICES, env={**env, "AURAGRID_X402_CDP_KEY_FILE": d + "/nope"}))
+
+    def test_cdp_facilitator_is_built_from_the_key_file(self):
+        d = tempfile.mkdtemp()
+        path = os.path.join(d, "cdp.json")
+        with open(path, "w") as fh:
+            json.dump({"name": "organizations/o/apiKeys/k",
+                       "privateKey": "-----BEGIN EC PRIVATE KEY-----\nx\n-----END EC PRIVATE KEY-----"}, fh)
+        os.chmod(path, 0o600)
+        cfg = x402_rail.Config(pay_to=PAY_TO, facilitator_url=x402_rail.CDP_FACILITATOR_URL,
+                               prices={"btc-fees": 0.002}, cdp_key_file=path)
+        import x402.http as xh
+        seen = {}
+        real = xh.HTTPFacilitatorClient
+
+        class Spy(real):
+            def __init__(self, config=None, *a, **k):
+                seen["url"] = config.get("url") if isinstance(config, dict) else getattr(config, "url", None)
+                seen["auth"] = bool(config.get("create_headers")) if isinstance(config, dict) else None
+                raise RuntimeError("stop before any network call")
+        xh.HTTPFacilitatorClient = Spy
+        try:
+            with self.assertRaises(RuntimeError):
+                x402_rail.build_middleware(cfg, lambda k: {})
+        finally:
+            xh.HTTPFacilitatorClient = real
+        self.assertEqual(seen, {"url": x402_rail.CDP_FACILITATOR_URL, "auth": True})
+
     def test_feed_key(self):
         self.assertEqual(x402_rail.feed_key("/x402/v1/batch/btc-fees"), "btc-fees")
         self.assertIsNone(x402_rail.feed_key("/x402/v1/batch/../admin"))

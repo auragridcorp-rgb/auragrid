@@ -4,7 +4,9 @@
 
 Off unless configured (environment, set by the owner; nothing here holds keys):
     AURAGRID_X402_PAY_TO           EVM address that receives the USDC (required)
-    AURAGRID_X402_FACILITATOR_URL  facilitator that verifies and settles payments (required)
+    AURAGRID_X402_FACILITATOR_URL  facilitator that verifies and settles payments, or instead:
+    AURAGRID_X402_CDP_KEY_FILE     Coinbase CDP API key JSON (chmod 600): uses Coinbase's hosted
+                                   facilitator with signed requests (cdp-sdk)
     AURAGRID_X402_NETWORK          CAIP-2 network, default eip155:8453 (Base mainnet)
 Prices are per request, in USD, from pricing.yaml `x402:` (only feeds listed there are sold).
 
@@ -43,6 +45,7 @@ class Config:
     network: str = BASE_MAINNET
     prices: dict = field(default_factory=dict)   # feed key (e.g. "btc-fees") -> USD per request
     batch_prefix: str = "batch"
+    cdp_key_file: Optional[str] = None           # Coinbase CDP API key JSON (never logged)
 
     def path(self, key: str) -> str:
         return "%s%s/%s" % (PREFIX, self.batch_prefix, key)
@@ -55,10 +58,17 @@ def load_config(prices: dict, env=os.environ, batch_prefix: str = "batch") -> Op
     """The x402 config, or None (rail off) when anything required is missing or malformed."""
     pay_to = (env.get("AURAGRID_X402_PAY_TO") or "").strip()
     url = (env.get("AURAGRID_X402_FACILITATOR_URL") or "").strip().rstrip("/")
+    cdp_key_file = (env.get("AURAGRID_X402_CDP_KEY_FILE") or "").strip() or None
     network = (env.get("AURAGRID_X402_NETWORK") or BASE_MAINNET).strip()
-    if not pay_to and not url:
+    if not pay_to and not url and not cdp_key_file:
         return None
     problems = []
+    if cdp_key_file:
+        try:
+            cdp_credentials(cdp_key_file)
+            url = url or CDP_FACILITATOR_URL
+        except Exception as exc:
+            problems.append("AURAGRID_X402_CDP_KEY_FILE unusable (%s)" % type(exc).__name__)
     if not ADDRESS_RE.match(pay_to):
         problems.append("AURAGRID_X402_PAY_TO is not a 0x... EVM address")
     if not URL_RE.match(url):
@@ -80,7 +90,28 @@ def load_config(prices: dict, env=os.environ, batch_prefix: str = "batch") -> Op
     if problems:
         log.error("x402 rail OFF: %s", "; ".join(problems))
         return None
-    return Config(pay_to=pay_to, facilitator_url=url, network=network, prices=clean, batch_prefix=batch_prefix)
+    return Config(pay_to=pay_to, facilitator_url=url, network=network, prices=clean, batch_prefix=batch_prefix,
+                  cdp_key_file=cdp_key_file)
+
+
+CDP_FACILITATOR_URL = "https://api.cdp.coinbase.com/platform/v2/x402"
+
+
+def cdp_credentials(path: str) -> tuple:
+    """(key id, secret) from the JSON Coinbase lets you download for a CDP API key.
+
+    Accepts the field names CDP has used ("id"/"name"/"apiKeyId" and "privateKey"/"secret"/
+    "apiKeySecret"). Raises if the file is missing, readable by others, or incomplete."""
+    st = os.stat(path)
+    if st.st_mode & 0o077:
+        raise PermissionError("key file must be chmod 600")
+    with open(path) as fh:
+        data = json.load(fh)
+    key_id = next((data[k] for k in ("id", "name", "apiKeyId", "keyId") if data.get(k)), None)
+    secret = next((data[k] for k in ("privateKey", "secret", "apiKeySecret") if data.get(k)), None)
+    if not key_id or not secret:
+        raise ValueError("key file lacks an id or a secret")
+    return key_id, secret
 
 
 def feed_key(path: str, batch_prefix: str = "batch") -> Optional[str]:
@@ -119,6 +150,10 @@ def build_middleware(cfg: Config, describe: Callable[[str], dict], facilitator=N
     from x402.http.middleware.fastapi import payment_middleware
     from x402.mechanisms.evm.exact import register_exact_evm_server
 
+    if facilitator is None and cfg.cdp_key_file:
+        from cdp.x402 import create_facilitator_config   # signs each request with the CDP key
+        key_id, secret = cdp_credentials(cfg.cdp_key_file)
+        facilitator = HTTPFacilitatorClient(create_facilitator_config(key_id, secret))
     if facilitator is None:
         facilitator = HTTPFacilitatorClient(FacilitatorConfig(url=cfg.facilitator_url))
     server = register_exact_evm_server(x402ResourceServer(facilitator), cfg.network)
