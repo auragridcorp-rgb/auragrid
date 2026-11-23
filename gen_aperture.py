@@ -49,7 +49,8 @@ RETIRED_SERVICE = "retired"
 PUBLIC_PATHS = (
     r"^/(buy|terms|llms\.txt|robots\.txt|status|status\.json|openapi\.json|agent-manifest\.json"
     r"|\.well-known/ai-plugin\.json|\.well-known/l402-services"
-    r"|api/v1/sample/[a-z0-9-]+|api/v1/price/[a-z0-9/-]+)$"
+    r"|api/v1/sample/[a-z0-9-]+|api/v1/price/[a-z0-9/-]+"
+    r"|x402/v1/[a-z0-9-]+/[a-z0-9-]+)$"   # x402: the backend asks for and checks the payment
 )
 PUBLIC_RATE = {"requests": 60, "per": "1m", "burst": 20}   # per client IP; protects egress
 BATCH_PREFIX = os.environ.get("AURAGRID_BATCH_PREFIX", "batch")

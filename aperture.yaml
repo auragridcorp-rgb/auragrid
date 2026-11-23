@@ -71,13 +71,13 @@ services:
   hostregexp: .*
   address: 127.0.0.1:8000
   protocol: http
-  pathregexp: ^/(buy|terms|llms\.txt|robots\.txt|status|status\.json|openapi\.json|agent-manifest\.json|\.well-known/ai-plugin\.json|\.well-known/l402-services|api/v1/sample/[a-z0-9-]+|api/v1/price/[a-z0-9/-]+)$
+  pathregexp: ^/(buy|terms|llms\.txt|robots\.txt|status|status\.json|openapi\.json|agent-manifest\.json|\.well-known/ai-plugin\.json|\.well-known/l402-services|api/v1/sample/[a-z0-9-]+|api/v1/price/[a-z0-9/-]+|x402/v1/[a-z0-9-]+/[a-z0-9-]+)$
   auth: 'off'
   authwhitelistpaths:
-  - ^/(buy|terms|llms\.txt|robots\.txt|status|status\.json|openapi\.json|agent-manifest\.json|\.well-known/ai-plugin\.json|\.well-known/l402-services|api/v1/sample/[a-z0-9-]+|api/v1/price/[a-z0-9/-]+)$
+  - ^/(buy|terms|llms\.txt|robots\.txt|status|status\.json|openapi\.json|agent-manifest\.json|\.well-known/ai-plugin\.json|\.well-known/l402-services|api/v1/sample/[a-z0-9-]+|api/v1/price/[a-z0-9/-]+|x402/v1/[a-z0-9-]+/[a-z0-9-]+)$
   price: 0
   ratelimits:
-  - pathregexp: ^/(buy|terms|llms\.txt|robots\.txt|status|status\.json|openapi\.json|agent-manifest\.json|\.well-known/ai-plugin\.json|\.well-known/l402-services|api/v1/sample/[a-z0-9-]+|api/v1/price/[a-z0-9/-]+)$
+  - pathregexp: ^/(buy|terms|llms\.txt|robots\.txt|status|status\.json|openapi\.json|agent-manifest\.json|\.well-known/ai-plugin\.json|\.well-known/l402-services|api/v1/sample/[a-z0-9-]+|api/v1/price/[a-z0-9/-]+|x402/v1/[a-z0-9-]+/[a-z0-9-]+)$
     requests: 60
     per: 1m
     burst: 20

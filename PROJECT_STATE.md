@@ -214,6 +214,12 @@ unreachable old commits by ID until GitHub Support clears them.
   not running); the production node is `~/.lnd`.
 - `aperture.db` and `attest.macaroon` tightened to chmod 600.
 
+## x402 (second payment rail)
+
+Built and deployed 2026-11-23, **off** until `AURAGRID_X402_PAY_TO` and
+`AURAGRID_X402_FACILITATOR_URL` are set: see `X402_PLAN.md` (status + owner steps). Per-request
+prices in `pricing.yaml x402:`; rollback: unset the two variables and restart `auragrid-api`.
+
 ## Known gaps
 
 - **First settled L402 invoice (2026-11-21) is an owner self-test, not customer revenue.**
@@ -244,7 +250,7 @@ unreachable old commits by ID until GitHub Support clears them.
 
     /home/ubuntu/miniconda/envs/auragrid_env/bin/python -m unittest discover -s tests -t .
 
-126 offline tests (no LND, Aperture or network needed). Live checks:
+141 offline tests (no LND, Aperture or network needed). Live checks:
 `python eia_grid_feed.py --check`, `python fetcher.py --once`,
 `python verify_deployment.py --base https://84.12.79.124 --ip 84.12.79.124`
 (43 PASS, 0 WARN, 0 FAIL on 2026-11-19, run on the server; a stale paid feed

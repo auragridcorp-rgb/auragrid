@@ -1,8 +1,22 @@
 # x402 as a second payment rail: plan for Joshua (decision point 2)
 
-Status: **research and design only.** Nothing below is implemented: no keys, wallets or
-accounts exist. AurAgrid keeps selling over L402 (Lightning) until you decide.
-Sources were read on 2026-11-19 (list at the end); these docs change often.
+Status (2026-11-23): **built, tested and deployed, switched OFF.** `x402_rail.py` serves
+`/x402/v1/batch/<feed>` (USDC on Base, `exact` scheme, per-request prices from `pricing.yaml x402:`:
+btc-fees $0.002, ln-network $0.004). Stale feeds answer 503 before any payment is asked; settlement
+happens only after a 2xx; settlements go to the ledger (`x402_payments`, keyed by transaction hash).
+Until the owner provides a receiving address and a facilitator, `/x402/...` answers 404 "not enabled".
+Library: `x402[evm]==2.27.0` (`requirements-x402.txt`; FastAPI deliberately not upgraded).
+
+To switch it on (owner):
+1. A receiving address on Base you control (self-custody wallet, or a Coinbase account's Base
+   USDC address). Public address only: never give the server a private key or seed.
+2. A facilitator for **mainnet**. x402.org's free one settles testnet only (the config refuses it on
+   mainnet). Coinbase CDP: free account + API key (first 1,000 settlements a month free, then
+   $0.001 each); its per-request auth needs `cdp-sdk`, added when the key exists.
+3. Add to `~/.bashrc` (read by `scripts/run_backend.sh`), then restart `auragrid-api`:
+   `export AURAGRID_X402_PAY_TO=0x...` and `export AURAGRID_X402_FACILITATOR_URL=https://...`
+4. One real $0.002 test payment from a separate wallet, then the manifest and llms.txt advertise x402
+   automatically, and the route can be listed in x402 Bazaar / x402scan / 402 Index.
 
 ## What x402 is, in one paragraph
 

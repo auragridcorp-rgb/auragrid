@@ -1,0 +1,8 @@
+# x402 seller side (payment middleware + EVM "exact" scheme), installed 2026-11-23.
+# Pins: x402 2.27.0 (released 2026-11-04; newer releases were under two weeks old). The [fastapi]
+# extra is deliberately NOT used: it would upgrade FastAPI in production. Existing packages are held
+# at their installed versions (-c constraints); bitarray/regex pinned to releases >= 2 weeks old.
+#   pip install -r requirements-x402.txt -c <(pip freeze | grep -iE '^(fastapi|starlette|pydantic|pydantic-core|httpx|anyio|requests|urllib3|typing-extensions)==')
+x402[evm]==2.27.0
+bitarray==3.12.3
+regex==2026.11.9

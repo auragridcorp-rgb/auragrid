@@ -80,6 +80,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 import feeds
+import yaml
 from app.buy_page import BUY_HTML
 from app.lnd_client import lnd
 import attestation
@@ -89,6 +90,7 @@ from pass_support import HOURLY, PlanRewriteMiddleware, PlanRouter, feed_path, l
 from pricer import PriceEngine, normalize_path
 import derived
 import jobs
+import x402_rail
 import ops_monitor
 from store import Store
 # Provider modules are imported for their provenance (feeds.describe); the API never
@@ -289,6 +291,7 @@ if _attest_macaroon:
     app.add_middleware(
         AttestationMiddleware,
         sign=lnd_rest_signer(os.environ["LND_REST_URL"], os.environ["LND_TLS_CERT"], _attest_macaroon_hex),
+        prefix=("/api/v1/", "/x402/v1/"),
     )
 else:
     log.warning("AURAGRID_ATTEST_MACAROON not set: responses will NOT carry X-AurAgrid-Signature-V2")
@@ -555,7 +558,7 @@ PAID_PATHS, FREE_PATHS = _route_sets()
 def classify_path(path: str) -> str:
     """Traffic category for one request path (see ops_monitor.CATEGORIES)."""
     norm = normalize_path(path) if path.startswith("/api/v1/") else None
-    if norm in PAID_PATHS:
+    if norm in PAID_PATHS or x402_rail.feed_key(path, BATCH_PREFIX) in ACCESS.paid:
         return "paid"
     if norm in FREE_PATHS or (norm and norm in derived.ENDPOINTS):
         return "free"
@@ -967,8 +970,19 @@ async def get_agent_manifest(request: Request):
         "plans": _plan_entries(),
         "checkout_url": base + "/buy",
         "payment_protocol": "L402",
+        **({"payment_protocols": ["L402", "x402"], "x402": _x402_manifest(base)} if X402 else {}),
         "signature": signature,
     }
+
+
+def _x402_manifest(base: str) -> dict:
+    """The x402 rail as discovery documents show it (only when it is switched on)."""
+    return {"scheme": "exact", "network": X402.network, "asset": "USDC", "pay_to": X402.pay_to,
+            "pricing": "per request; no hour pass (L402 tokens cover an hour of calls)",
+            "stale_policy": "a stale feed answers 503 before any payment requirement is issued",
+            "endpoints": [{"url": base + X402.path(k), "method": "GET", "price_usd": v,
+                           "l402_equivalent": "/api/v1/%s/%s" % (BATCH_PREFIX, k)}
+                          for k, v in sorted(X402.prices.items())]}
 
 
 @app.get("/api/v1/price/{slug:path}")
@@ -1110,6 +1124,33 @@ for _slug, _name, _, _ in PAID_CATALOG:
 
 
 # ---------------------------------------------------------------------------
+# x402 rail (USDC on Base) for the same paid feeds: /x402/v1/<batch>/<feed>. Off until the
+# owner sets AURAGRID_X402_PAY_TO and AURAGRID_X402_FACILITATOR_URL (x402_rail.py). Added
+# after every other middleware, so it is outside the signer: the signature covers the data,
+# and the payment check runs before anything else touches the request.
+# ---------------------------------------------------------------------------
+def _x402_prices(path: str = PRICING_CONFIG) -> dict:
+    try:
+        with open(path) as fh:
+            raw = (yaml.safe_load(fh) or {}).get("x402") or {}
+    except OSError:
+        return {}
+    return {k: v for k, v in raw.items() if k in ACCESS.paid}   # only feeds sold over L402 too
+
+
+_X402_NAMES = {feed_key(slug): name for slug, name, _, _ in PAID_CATALOG}
+X402 = x402_rail.load_config(_x402_prices(), batch_prefix=BATCH_PREFIX)
+x402_rail.install(
+    app, X402,
+    describe=lambda key: {"name": _X402_NAMES.get(key, key)},
+    degraded=lambda key: jobs.feed_degraded(STORE, key),
+    stale_refusal=lambda key: _stale_refusal(key, None),
+    ledger=ledger,
+    handler_for=lambda key: _feed_handler(BATCH_PREFIX + "/" + key),
+)
+
+
+# ---------------------------------------------------------------------------
 # Discovery for LLM agents
 # ---------------------------------------------------------------------------
 TERMS_TEXT = """AurAgrid terms of use
@@ -1152,6 +1193,9 @@ def llms_txt(request: Request):
              "- Terms: %s/terms" % base]
     if CONTACT:
         lines.append("- Contact: %s" % CONTACT)
+    if X402:
+        lines.append("- Also payable per request with x402 (USDC on %s): %s" % (X402.network, ", ".join(
+            "%s%s ($%s)" % (base, X402.path(k), v) for k, v in sorted(X402.prices.items()))))
     if SIGNING_ENABLED and SIGNING_PUBKEY:
         lines.append("- Responses are signed (X-AurAgrid-Signature-V2) by node key %s; see the manifest's "
                      "`signature` block" % SIGNING_PUBKEY)

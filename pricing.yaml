@@ -7,6 +7,14 @@ endpoints:
   btc-fees: 0.005     # per 1-hour token
   ln-network: 0.01    # per 1-hour token
 
+# x402 (USDC on Base), USD per REQUEST (x402's "exact" scheme has no hour pass), served at
+# /x402/v1/batch/<feed>. Off until AURAGRID_X402_PAY_TO and AURAGRID_X402_FACILITATOR_URL are
+# set (x402_rail.py). Set near the median agent data price (~$0.0024/call, 2026) and below the
+# L402 hour token, so one call costs less on x402 and many calls are cheaper on L402.
+x402:
+  btc-fees: 0.002
+  ln-network: 0.004
+
 # 30-day passes and bundles (pass_support.py). After editing, regenerate
 # Aperture's config with `python gen_aperture.py` and restart Aperture.
 #   - single-feed plans with `usd` are USD-pegged through the pricer

@@ -89,6 +89,14 @@ class Ledger:
             conn.execute("""CREATE TABLE IF NOT EXISTS counters (
                                 name TEXT NOT NULL, day TEXT NOT NULL, count INTEGER NOT NULL DEFAULT 0,
                                 PRIMARY KEY (name, day))""")
+            # x402 settlements: one row per on-chain transaction (the hash is the receipt).
+            conn.execute("""CREATE TABLE IF NOT EXISTS x402_payments (
+                                tx_hash  TEXT PRIMARY KEY,
+                                endpoint TEXT NOT NULL,
+                                network  TEXT NOT NULL,
+                                payer    TEXT,
+                                usd      REAL NOT NULL,
+                                settled  INTEGER NOT NULL)""")
             columns = {row[1] for row in conn.execute("PRAGMA table_info(token_usage)")}
             if "plan" not in columns:  # ledgers created before plans existed
                 conn.execute("ALTER TABLE token_usage ADD COLUMN plan TEXT NOT NULL DEFAULT 'hourly'")
@@ -151,6 +159,26 @@ class Ledger:
             row = conn.execute("SELECT COALESCE(SUM(count), 0) FROM counters WHERE name=? AND day>=?",
                                (name, since_day)).fetchone()
         return int(row[0])
+
+    def record_x402(self, tx_hash: str, endpoint: str, network: str, payer: Optional[str], usd: float) -> None:
+        """One settled x402 payment. Idempotent: the same transaction is never counted twice."""
+        try:
+            with self._db() as conn:
+                conn.execute("INSERT OR IGNORE INTO x402_payments (tx_hash, endpoint, network, payer, usd, settled) "
+                             "VALUES (?, ?, ?, ?, ?, ?)",
+                             (str(tx_hash)[:100], endpoint, network, (payer or "")[:100] or None, float(usd),
+                              int(time.time())))
+        except Exception:
+            log.exception("x402 payment %s not recorded", tx_hash)
+
+    def x402_summary(self) -> dict:
+        """Settled x402 payments: totals, by endpoint, distinct payers."""
+        with self._db() as conn:
+            count, usd, payers = conn.execute(
+                "SELECT COUNT(*), COALESCE(SUM(usd), 0), COUNT(DISTINCT payer) FROM x402_payments").fetchone()
+            by = {ep: {"payments": n, "usd": round(s, 6)} for ep, n, s in conn.execute(
+                "SELECT endpoint, COUNT(*), SUM(usd) FROM x402_payments GROUP BY endpoint")}
+        return {"payments": count, "usd": round(usd, 6), "distinct_payers": payers, "by_endpoint": by}
 
     def flush(self) -> None:
         self._queue.join()

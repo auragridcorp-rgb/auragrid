@@ -3,6 +3,18 @@
 AurAgrid's pivot to a lean, free-tier L402 data oracle (plan: `RESEARCH.md`;
 current state: `PROJECT_STATE.md`). Newest first.
 
+## 2026-11-23: x402 rail (off until configured), dashboard traffic history
+
+- **x402** (`x402_rail.py`, `tests/test_x402.py`): `/x402/v1/batch/btc-fees` ($0.002/request) and
+  `ln-network` ($0.004), USDC on Base. Stale gate before payment, settle only after 2xx, ledger table
+  `x402_payments`, signed responses, dashboard counts x402 traffic as paid, Aperture passes `/x402/`
+  through (config regenerated; old one at `~/.aperture/aperture.yaml.bak-20261123-prex402`).
+  Discovery advertises it only when on. Needs the owner's receiving address + a mainnet facilitator.
+- `x402[evm]==2.27.0` installed (29 new packages, no existing package changed; pins in
+  `requirements-x402.txt`; pre-install freeze in the 2026-11-19 backup folder).
+- **Dashboard traffic** kept only the current Aperture log after a rotation (Aperture numbers
+  rotations upwards); now reads every rotated file in the window.
+
 ## 2026-11-21: dashboard status fix, listings
 
 - **energy/grid fresh again.** EIA's fuel mix, net generation and interchange were 30 h
