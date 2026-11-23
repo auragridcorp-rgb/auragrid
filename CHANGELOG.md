@@ -3,6 +3,19 @@
 AurAgrid's pivot to a lean, free-tier L402 data oracle (plan: `RESEARCH.md`;
 current state: `PROJECT_STATE.md`). Newest first.
 
+## 2026-11-23: incident, home folder permissions (08:24-13:43 UTC)
+
+- Between 08:24:13 and 08:24:43 the permissions/ownership of `/home/ubuntu` changed so that
+  processes running as `ubuntu` could no longer read their own files (pricer, fetcher, API: Permission
+  denied; SSH key logins refused from 08:28). Not via sudo and not by any Claude session (transcripts
+  checked); the exact command is unknown (the shell open at the time saved no history).
+- Effects: no new data 08:25-13:43 (paid feeds answered 503 stale, nothing charged); five console
+  power-offs (12:57-13:32, "Power key pressed" = OCI console); clean shutdowns, no data loss
+  (feeds.db and ledger.db pass integrity checks; LND and bitcoind synced, 3/3 channels active).
+- Owner's recovery 13:40-13:45: `chown -R ubuntu:ubuntu /home/ubuntu`, `chmod 755 /home/ubuntu`,
+  new ED25519 SSH key (old RSA key removed), password login off again, `passwd -l ubuntu`.
+- Afterwards: `~/.auragrid/pypi_token` and `bashrc.pre-https` tightened to 600. Verify 43/0/0, 144 tests.
+
 ## 2026-11-23: x402 rail LIVE, dashboard traffic history
 
 - **x402 switched on** with the owner's Base address and the PayAI facilitator (no account; CDP's
