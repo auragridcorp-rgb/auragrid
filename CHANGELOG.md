@@ -3,6 +3,9 @@
 AurAgrid's pivot to a lean, free-tier L402 data oracle (plan: `RESEARCH.md`;
 current state: `PROJECT_STATE.md`). Newest first.
 
+- **`langchain-auragrid` 0.2.0 on PyPI** (installs and calls live, signature verified); its
+  requests carry `User-Agent: langchain-auragrid/0.2.0`. Token file deleted after upload.
+
 ## 2026-11-23: incident, home folder permissions (08:24-13:43 UTC)
 
 - Between 08:24:13 and 08:24:43 the permissions/ownership of `/home/ubuntu` changed so that

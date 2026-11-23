@@ -19,7 +19,7 @@ truthful text from verified facts, nothing posted to communities without Joshua'
 | Smithery | — | — | Not possible | Stopped accepting listings (now part of Arcade) |
 | [punkpeye/awesome-mcp-servers](https://github.com/punkpeye/awesome-mcp-servers/pull/20232) | PR #20232, Finance & Fintech | 2026-11-21 | **Open** (1 line, mergeable; Glama badge shows B; title has 🤖🤖🤖) | Fork `auragridcorp-rgb/awesome-mcp-servers`; the server's SSH key can push to it. Awaiting maintainer merge |
 | x402 Bazaar / agentic.market / x402scan | — | — | After the first settled payment | Bazaar lists routes settled through Coinbase's facilitator (we use PayAI); x402scan indexes on-chain settlements automatically |
-| LangChain | `langchain-auragrid` 0.2.0 | 2026-11-11 | Public on GitHub | Not on PyPI; publish needs your token |
+| [PyPI](https://pypi.org/project/langchain-auragrid/0.2.0/) | `langchain-auragrid` 0.2.0 | 2026-11-23 | **Live** (`pip install langchain-auragrid`) | Identifies itself as `langchain-auragrid/<version>` in the access log. Next release needs a project-scoped token |
 
 ## Standard description (one line, verified facts)
 
