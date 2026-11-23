@@ -37,6 +37,10 @@ LISTINGS_TO_CHECK = [
      "84.12.79.124", True),
     ("402index ln-network", "https://402index.io/api/v1/services/ad2d6d6e-ea85-4e8b-8267-b3fc3e107c06",
      "84.12.79.124", True),
+    ("402index btc-fees x402", "https://402index.io/api/v1/services/4f95a72a-169d-47d7-b3cd-ba8f349f6243",
+     "84.12.79.124", True),
+    ("402index ln-network x402", "https://402index.io/api/v1/services/2f87421c-f226-4acd-9870-7b4f54636994",
+     "84.12.79.124", True),
 ]
 
 

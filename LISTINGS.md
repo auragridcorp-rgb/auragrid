@@ -9,6 +9,8 @@ truthful text from verified facts, nothing posted to communities without Joshua'
 | [satring.com](https://satring.com/services/auragrid-bitcoin-fees-lightning-network-data) | `btc-fees` (+ ln-network, bundle in the text) | listed 2026-11-11, text and price updated 2026-11-19 | **Live** | `PATCH` / `DELETE https://satring.com/api/v1/services/auragrid-bitcoin-fees-lightning-network-data` with header `X-Edit-Token: $(cat ~/.auragrid/satring_edit_token)`; free |
 | [402 Index](https://402index.io) | `btc-fees` (id `22131ab3-de4b-42c2-b58e-f1f5852ca889`) | 2026-11-19 | **Pending review** (L402 challenge verified) | Edit/delete needs a domain claim, which rejects bare IPs: email hello@402index.io |
 | [402 Index](https://402index.io) | `ln-network` (id `ad2d6d6e-ea85-4e8b-8267-b3fc3e107c06`) | 2026-11-19 | **Pending review** (L402 challenge verified) | As above |
+| [402 Index](https://402index.io) | `btc-fees` over **x402** (id `4f95a72a-169d-47d7-b3cd-ba8f349f6243`), $0.002, USDC on Base | 2026-11-23 | **Pending review** (probe: healthy) | As above |
+| [402 Index](https://402index.io) | `ln-network` over **x402** (id `2f87421c-f226-4acd-9870-7b4f54636994`), $0.004, USDC on Base | 2026-11-23 | **Pending review** (probe: healthy) | As above |
 | [L402 Apps](https://www.l402apps.com) | `btc-fees`, `ln-network` | tried 2026-11-19 | **Retry later: their side** | `POST /api/api-submissions` {url, invoice, description}. Joshua approved 10-sat receive-only invoices. Every valid invoice was rejected ("Could not decode your Lightning invoice"), and their own `/api/apis` answered "Failed to create Lightning invoice" at the same time, so their Lightning backend looks down. Retry with a fresh invoice (the old ones expire unpaid, harmlessly) |
 | [PyPI](https://pypi.org/project/auragrid-mcp/0.3.0/) | `auragrid-mcp` 0.3.0 | 2026-11-19 | **Live** | Project-scoped token (Joshua); yank a release from the PyPI project page |
 | [Official MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.auragridcorp-rgb/auragrid) | `io.github.auragridcorp-rgb/auragrid` 0.3.0 | 2026-11-19 | **Live** | `mcp-publisher publish` with a new version in server.json (login: GitHub device flow as auragridcorp-rgb); status changes via `mcp-publisher status` |
@@ -16,7 +18,7 @@ truthful text from verified facts, nothing posted to communities without Joshua'
 | [Glama](https://glama.ai/mcp/servers/auragridcorp-rgb/auragrid) | `auragridcorp-rgb/auragrid` | 2026-11-21 (first try rejected: no LICENSE; MIT added) | **Listed, rated B**; not in search until claimed + Dockerfile checks pass | Claim via the server page's admin settings (GitHub login), then paste `auragrid_mcp/Dockerfile` in its admin page |
 | Smithery | — | — | Not possible | Stopped accepting listings (now part of Arcade) |
 | [punkpeye/awesome-mcp-servers](https://github.com/punkpeye/awesome-mcp-servers/pull/20232) | PR #20232, Finance & Fintech | 2026-11-21 | **Open** (1 line, mergeable; Glama badge shows B; title has 🤖🤖🤖) | Fork `auragridcorp-rgb/awesome-mcp-servers`; the server's SSH key can push to it. Awaiting maintainer merge |
-| x402 Bazaar / agentic.market | — | — | Waits for decision point 2 | Only once x402 exists (`X402_PLAN.md`) |
+| x402 Bazaar / agentic.market / x402scan | — | — | After the first settled payment | Bazaar lists routes settled through Coinbase's facilitator (we use PayAI); x402scan indexes on-chain settlements automatically |
 | LangChain | `langchain-auragrid` 0.2.0 | 2026-11-11 | Public on GitHub | Not on PyPI; publish needs your token |
 
 ## Standard description (one line, verified facts)
@@ -58,6 +60,11 @@ truthful text from verified facts, nothing posted to communities without Joshua'
 Contact: Joshua gave auragridcorp@gmail.com on 2026-11-19 (`AURAGRID_CONTACT` in ~/.bashrc); it
 appears in the manifest, llms.txt and OpenAPI `info.contact`. Listings submitted before that
 date have none.
+
+**402 Index, x402 pair (2026-11-23)**: same descriptions as the L402 pair, with "$0.002 / $0.004 per
+request in USDC on Base", "no payment is requested" for stale data, and a pointer to the L402 path.
+`payment_network: eip155:8453`, `payment_asset: USDC`, `provider: AurAgrid`. No contact email sent
+(optional; it is in the manifest).
 
 ## Drafts (not submitted)
 
