@@ -7,8 +7,11 @@ happens only after a 2xx; settlements go to the ledger (`x402_payments`, keyed b
 Until the owner provides a receiving address and a facilitator, `/x402/...` answers 404 "not enabled".
 Library: `x402[evm]==2.27.0` (`requirements-x402.txt`; FastAPI deliberately not upgraded).
 
+Receiving address (owner, 2026-11-23, self-custody, checksum verified, a plain wallet on Base):
+`0x1e2c1E4BA923BD3612e43e4b82E22dD299626b6B` (also in `~/.auragrid/x402_pay_to`).
+
 To switch it on (owner):
-1. A receiving address on Base you control (self-custody wallet, or a Coinbase account's Base
+1. ~~A receiving address~~ done. A receiving address on Base you control (self-custody wallet, or a Coinbase account's Base
    USDC address). Public address only: never give the server a private key or seed.
 2. A facilitator for **mainnet**. x402.org's free one settles testnet only (the config refuses it on
    mainnet). Coinbase CDP: free account + API key (first 1,000 settlements a month free, then
