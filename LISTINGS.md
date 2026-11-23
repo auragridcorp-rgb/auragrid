@@ -80,9 +80,32 @@ and appropriate, never spam. Plan: one post, only after the first real purchase 
 end to end (a broken flow in front of buyers would cost more than silence). Best venue:
 Stacker News ~bitcoin (L402 audience); needs Joshua's account, since the server has no login there.
 
-**Stacker News / Nostr** draft:
+**Stacker News / Nostr** draft (final, 2026-11-23; numbers checked live that day). Owner posts it
+from his own account (the server has no Stacker News login). Territory: ~bitcoin. Title:
 
-> I run AurAgrid, a small L402 data service on my own Bitcoin and Lightning nodes: fee
-> estimates every minute ($0.005 per 1-hour token) and Lightning network stats hourly ($0.01),
-> with free delayed samples and signed responses. Stale data answers 503 instead of taking
-> payment. Manifest: https://84.12.79.124/agent-manifest.json. Feedback welcome.
+    Show SN: AurAgrid, Bitcoin fee and Lightning network data from my own nodes, paid per call over L402 or x402
+
+Body:
+
+> I run AurAgrid, a small data API on my own Bitcoin Core and LND nodes, built for scripts and AI
+> agents that pay per call.
+>
+> **Paid (signed by the node key, with provenance):**
+> - Bitcoin fee estimates (1-144 blocks), mempool size and min fee, last block's fee percentiles,
+>   observed every minute: `/api/v1/batch/btc-fees`
+> - Lightning network size, capacity, channel-size and fee percentiles from LND's gossip graph,
+>   hourly: `/api/v1/batch/ln-network`
+>
+> Pay over **L402**: a 1-hour token is 8 sats / 16 sats (pegged to $0.005 / $0.01). Or per request
+> over **x402** in USDC on Base: $0.002 / $0.004 at `/x402/v1/batch/...`.
+> Stale data answers 503 and never asks for payment.
+>
+> **Free, no key:** 10-minute-delayed fee sample, previous-day Lightning sample, U.S. EIA grid
+> demand and generation mix, USGS earthquakes, NOAA marine weather, plus derived fee-timing,
+> grid-carbon and area-risk endpoints.
+>
+> Machine-readable: https://84.12.79.124/agent-manifest.json (also llms.txt and OpenAPI).
+> MCP server: `auragrid-mcp` (PyPI, Official MCP Registry); LangChain: `pip install langchain-auragrid`.
+>
+> No customers yet, so honest feedback is welcome: what Bitcoin or Lightning data would you
+> actually pay a few sats for?
