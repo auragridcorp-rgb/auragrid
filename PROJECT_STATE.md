@@ -221,9 +221,9 @@ prices in `pricing.yaml x402:`; rollback: unset the two variables and restart `a
 
 ## Source permissions
 
-- **EIA**: public domain; in addition, EIA confirmed by email to the owner (2026-11-24) that AurAgrid
-  may display and reuse its data, crediting EIA as the source (done on every EIA-based endpoint:
-  "Source: U.S. Energy Information Administration ... EIA does not endorse AurAgrid"). Keep the email.
+- **EIA**: public domain; in addition, EIA permits that AurAgrid may display and reuse its data with
+  credit (2026-11-24). Credit is given on every EIA-based endpoint: "Source: U.S. Energy Information
+  Administration ... EIA does not endorse AurAgrid".
 
 ## Known gaps
 

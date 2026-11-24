@@ -5,7 +5,7 @@ current state: `PROJECT_STATE.md`). Newest first.
 
 ## 2026-11-24: EIA reuse confirmed
 
-- EIA confirmed by email to the owner that AurAgrid may display and reuse its data with credit.
+- EIA permits that AurAgrid may display and reuse its data with credit.
   The "terms unclear" flag on the EIA-based derived endpoints (energy-snapshot, grid-carbon) is
   cleared; they stay free previews until the owner sets prices.
 
