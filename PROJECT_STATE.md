@@ -236,6 +236,9 @@ proposed prices in `derived.py ENDPOINTS`.
 - **EIA**: public domain; in addition, EIA permits that AurAgrid may display and reuse its data with
   credit (2026-11-24). Credit is given on every EIA-based endpoint: "Source: U.S. Energy Information
   Administration ... EIA does not endorse AurAgrid".
+- **ERCOT**: ERCOT permits AurAgrid to redistribute its real-time fuel mix (written permission held by the
+  owner, 2026-11-24). Not built yet: ERCOT's public dashboard JSON answers 403 to this server, and the
+  official Public API needs an ERCOT account (subscription key + username/password token login).
 
 ## Known gaps
 
