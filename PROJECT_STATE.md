@@ -62,7 +62,7 @@ Logs: `deploy/logrotate/auragrid` (installed in `/etc/logrotate.d/`) rotates
 `http://127.0.0.1:8000/` on the server (HTTP Basic, user `Sungey`, password in
 `~/.auragrid/admin_password`). Never routed through Aperture; from a laptop use
 `ssh -L 8000:127.0.0.1:8000 ubuntu@84.12.79.124` and open `http://localhost:8000`.
-From the owner's phone or any of his Tailscale devices (since 2026-11-24): **http://auragrid.tail5e8690.ts.net/**
+From the owner's phone or any device on the owner's Tailscale account (since 2026-11-24): **http://auragrid.tail5e8690.ts.net/**
 (Tailscale `serve`, tailnet only, Funnel off; port 80 bound only on `tailscale0`; same HTTP Basic login;
 paid routes still answer 403 without Aperture's gateway secret). `tailscaled` runs at boot; serve
 config persists. Turn off: `sudo tailscale serve --http=80 off`. Server joined with
