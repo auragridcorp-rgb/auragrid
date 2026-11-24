@@ -237,8 +237,10 @@ proposed prices in `derived.py ENDPOINTS`.
   credit (2026-11-24). Credit is given on every EIA-based endpoint: "Source: U.S. Energy Information
   Administration ... EIA does not endorse AurAgrid".
 - **ERCOT**: ERCOT permits AurAgrid to redistribute its real-time fuel mix (written permission held by the
-  owner, 2026-11-24). Not built yet: ERCOT's public dashboard JSON answers 403 to this server, and the
-  official Public API needs an ERCOT account (subscription key + username/password token login).
+  owner, 2026-11-24). **Left out for now (owner decision 2026-11-24).** Notes for later: the dashboard
+  JSON answers 403 to this server; the official Public API (needs an account) has no full fuel mix,
+  only 5-min wind/solar actuals, actual system load and real-time prices (prices not covered by the
+  permission as understood).
 
 ## Known gaps
 
