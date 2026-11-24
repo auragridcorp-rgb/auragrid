@@ -1,6 +1,9 @@
 # AurAgrid
 
-A small data oracle for software agents, paid per hour over Lightning (L402).
+[![auragridcorp-rgb/auragrid MCP server](https://glama.ai/mcp/servers/auragridcorp-rgb/auragrid/badges/score.svg)](https://glama.ai/mcp/servers/auragridcorp-rgb/auragrid)
+
+A small data oracle for software agents, paid per use over Lightning (L402, hour tokens) or
+x402 (USDC on Base, per request).
 
 - **Paid:** Bitcoin fee/mempool data and Lightning Network statistics, computed
   by AurAgrid's own Bitcoin Core and LND nodes.
