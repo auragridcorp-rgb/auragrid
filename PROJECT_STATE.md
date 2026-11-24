@@ -219,6 +219,13 @@ unreachable old commits by ID until GitHub Support clears them.
 **Live since 2026-11-23** (PayAI facilitator, owner's Base address): see `X402_PLAN.md`. Per-request
 prices in `pricing.yaml x402:`; rollback: unset the two variables and restart `auragrid-api`.
 
+## Derived endpoints: free by decision
+
+Owner decision 2026-11-24: all derived endpoints (fee-timing, area-risk, energy-snapshot,
+grid-carbon) stay **free** through the 90-day demand test; free calls are what get an unknown
+service tried. Revisit at the review (2027-02-17): price only those with real repeat usage, at the
+proposed prices in `derived.py ENDPOINTS`.
+
 ## Source permissions
 
 - **EIA**: public domain; in addition, EIA permits that AurAgrid may display and reuse its data with
