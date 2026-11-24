@@ -42,3 +42,7 @@ build/
 dist/
 *.egg-info/
 logs/
+
+# Research notes and reports: kept on the server only (owner decision 2026-11-24)
+research_notes/
+reports/
