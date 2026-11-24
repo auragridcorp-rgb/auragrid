@@ -10,8 +10,8 @@ current state: `PROJECT_STATE.md`). Newest first.
   via BotFather (Telegram now answers Unauthorized). History rewritten with `git-filter-repo
   --replace-text` (token and chat ID -> REMOVED_TELEGRAM_*), force-pushed: **all commit IDs changed**
   (83 commits). GitHub may still serve the old commit by its ID until its own garbage collection;
-  harmless now that the token is revoked. Pre-purge backups: `~/AurAgrid-prepurge-20261124.bundle`
-  (contains the old token) and `~/AurAgrid-runtime-20261124.tgz` (untracked runtime files), both 600.
+  harmless now that the token is revoked. Pre-purge backups (`~/AurAgrid-prepurge-20261124.bundle`
+  and `~/AurAgrid-runtime-20261124.tgz`) deleted after verification, at the owner's request.
 - Secret scan widened (Telegram, Slack, OpenAI, Stripe, Google, GitHub, PEM, nsec, PyPI patterns):
   nothing else real in history.
 
