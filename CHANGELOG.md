@@ -6,7 +6,7 @@ current state: `PROJECT_STATE.md`). Newest first.
 ## 2026-11-24: dashboard over Tailscale; EIA permits reuse with credit
 
 - **Dashboard reachable from the owner's phone** without the SSH tunnel: Tailscale 1.104.7 (official
-  apt repo, key 2596A99E...7F5868), node `auragrid`, `tailscale serve` on port 80, tailnet only.
+  apt repo, key 2596A99E...7F5868), node `auragrid`, `tailscale serve` over HTTPS on port 8443 (443 belongs to Aperture), tailnet only.
   Verified: login 200, no login 401, paid feed 403, nothing on the public IP.
 
 - EIA permits that AurAgrid may display and reuse its data with credit.
