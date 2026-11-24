@@ -216,6 +216,9 @@ unreachable old commits by ID until GitHub Support clears them.
   not running); the production node is `~/.lnd`.
 - `aperture.db` and `attest.macaroon` tightened to chmod 600.
 
+- 2026-11-24: Telegram bot token (from the removed swarm script) revoked by the owner and purged
+  from git history (force-push; commit IDs changed).
+
 ## x402 (second payment rail)
 
 **Live since 2026-11-23** (PayAI facilitator, owner's Base address): see `X402_PLAN.md`. Per-request

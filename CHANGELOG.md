@@ -3,6 +3,18 @@
 AurAgrid's pivot to a lean, free-tier L402 data oracle (plan: `RESEARCH.md`;
 current state: `PROJECT_STATE.md`). Newest first.
 
+## 2026-11-24: Telegram token purged from git history
+
+- The removed `auragrid_swarm.py` (deleted 2026-10-30) had a hard-coded Telegram bot token
+  (@AuragridAlerts_bot) and chat ID in the public history; the token was still valid. Owner revoked it
+  via BotFather (Telegram now answers Unauthorized). History rewritten with `git-filter-repo
+  --replace-text` (token and chat ID -> REMOVED_TELEGRAM_*), force-pushed: **all commit IDs changed**
+  (83 commits). GitHub may still serve the old commit by its ID until its own garbage collection;
+  harmless now that the token is revoked. Pre-purge backups: `~/AurAgrid-prepurge-20261124.bundle`
+  (contains the old token) and `~/AurAgrid-runtime-20261124.tgz` (untracked runtime files), both 600.
+- Secret scan widened (Telegram, Slack, OpenAI, Stripe, Google, GitHub, PEM, nsec, PyPI patterns):
+  nothing else real in history.
+
 ## 2026-11-24: dashboard over Tailscale; EIA permits reuse with credit
 
 - **Dashboard reachable from the owner's phone** without the SSH tunnel: Tailscale 1.104.7 (official
