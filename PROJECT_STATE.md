@@ -62,16 +62,13 @@ Logs: `deploy/logrotate/auragrid` (installed in `/etc/logrotate.d/`) rotates
 `http://127.0.0.1:8000/` on the server (HTTP Basic, user `Sungey`, password in
 `~/.auragrid/admin_password`). Never routed through Aperture; from a laptop use
 `ssh -L 8000:127.0.0.1:8000 ubuntu@84.12.79.124` and open `http://localhost:8000`.
-From the owner's phone or any device on the owner's Tailscale account (since 2026-11-24): **http://auragrid.tail5e8690.ts.net/**
-(Tailscale `serve`, tailnet only, Funnel off; port 80 bound only on `tailscale0`; same HTTP Basic login;
-paid routes still answer 403 without Aperture's gateway secret). `tailscaled` runs at boot; serve
-config persists. Turn off: `sudo tailscale serve --http=80 off`. Server joined with
-`--accept-dns=false` (its DNS is unchanged).
-Shows an alert banner, systemd units and processes, feed freshness, TLS days
-left, disk, signing, public traffic from Aperture's access log (paid / free /
-quote / discovery / scanner noise, with a paywall funnel joined to LND
-invoices), then revenue. Data: `/api/proxy/health`, `/api/proxy/traffic`
-(`ops_monitor.py`), `/api/proxy/stats`.
+From the owner's phone or any device on the owner's Tailscale account (since 2026-11-24):
+**https://auragrid.tail5e8690.ts.net:8443/** (Tailscale `serve`, tailnet only, Funnel off; Let's Encrypt
+cert via Tailscale HTTPS, auto-renewed; same HTTP Basic login; paid routes answer 403 without Aperture's
+gateway secret). Port 8443, not 443: Aperture listens on *:443, including the tailscale0 interface.
+`tailscaled` runs at boot; serve config persists. Turn off: `sudo tailscale serve --https=8443 off`.
+Joined with `--accept-dns=false` (server DNS unchanged). Enabling HTTPS published the node name in
+Certificate Transparency logs (a name only; the node is unreachable outside the tailnet).
 
 The Node API tile says **Unreachable** only when the server reports LND down (HTTP 502).
 If the browser loses the server (SSH tunnel closed, laptop asleep), it shows **Unknown**
