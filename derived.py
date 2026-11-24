@@ -334,7 +334,8 @@ def _result(feed: str, data: dict, inputs: list, derivation: str, source: str, c
 # Catalog metadata (read by app/main.py and gen_aperture.py)
 # ---------------------------------------------------------------------------
 # Free previews: each carries a proposed price for the owner to approve before anything is sold.
-# EIA-based ones stay free until the owner decides (EIA's API terms do not address commercial use).
+# EIA-based ones: EIA confirmed to the owner by email (2026-11-24) that AurAgrid may display and
+# reuse its data with credit to EIA, so they can be priced like the others once the owner decides.
 ENDPOINTS = {
     "derived/fee-timing": {
         "name": "Bitcoin Fee-Timing Signal", "func": fee_timing, "inputs": ["btc-fees"], "tier": "bitcoin",
@@ -358,11 +359,11 @@ ENDPOINTS = {
         "description": "Lower-48 electricity demand and generation shares, SPR and commercial crude stocks, and "
                        "U.S. LNG exports in one document, each part with its own as_of and stale flag.",
         "license": "Derived from EIA data (public domain); credit EIA, no implied endorsement",
-        "proposed_price_usd": 0.02, "terms_check": "EIA API terms do not address commercial use: free until decided"},
+        "proposed_price_usd": 0.02, "terms_check": "EIA confirmed reuse with credit (email to the owner, 2026-11-24)"},
     "derived/grid-carbon": {
         "name": "U.S. Grid Carbon Intensity", "func": grid_carbon, "inputs": ["energy/grid"], "tier": "energy",
         "description": "Direct CO2 intensity (g/kWh) of the Lower 48 and every EIA-930 region and balancing "
                        "authority, from the hourly generation mix and EIA's 2023 per-fuel emission rates.",
         "license": "Derived from EIA data (public domain); credit EIA, no implied endorsement",
-        "proposed_price_usd": 0.03, "terms_check": "EIA API terms do not address commercial use: free until decided"},
+        "proposed_price_usd": 0.03, "terms_check": "EIA confirmed reuse with credit (email to the owner, 2026-11-24)"},
 }
