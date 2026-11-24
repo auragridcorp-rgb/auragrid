@@ -3,7 +3,11 @@
 AurAgrid's pivot to a lean, free-tier L402 data oracle (plan: `RESEARCH.md`;
 current state: `PROJECT_STATE.md`). Newest first.
 
-## 2026-11-24: EIA permits reuse with credit
+## 2026-11-24: dashboard over Tailscale; EIA permits reuse with credit
+
+- **Dashboard reachable from the owner's phone** without the SSH tunnel: Tailscale 1.104.7 (official
+  apt repo, key 2596A99E...7F5868), node `auragrid`, `tailscale serve` on port 80, tailnet only.
+  Verified: login 200, no login 401, paid feed 403, nothing on the public IP.
 
 - EIA permits that AurAgrid may display and reuse its data with credit.
 - Owner decision: derived endpoints stay free through the 90-day demand test (review 2027-02-17).

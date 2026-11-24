@@ -62,6 +62,11 @@ Logs: `deploy/logrotate/auragrid` (installed in `/etc/logrotate.d/`) rotates
 `http://127.0.0.1:8000/` on the server (HTTP Basic, user `Sungey`, password in
 `~/.auragrid/admin_password`). Never routed through Aperture; from a laptop use
 `ssh -L 8000:127.0.0.1:8000 ubuntu@84.12.79.124` and open `http://localhost:8000`.
+From the owner's phone or any of his Tailscale devices (since 2026-11-24): **http://auragrid.tail5e8690.ts.net/**
+(Tailscale `serve`, tailnet only, Funnel off; port 80 bound only on `tailscale0`; same HTTP Basic login;
+paid routes still answer 403 without Aperture's gateway secret). `tailscaled` runs at boot; serve
+config persists. Turn off: `sudo tailscale serve --http=80 off`. Server joined with
+`--accept-dns=false` (its DNS is unchanged).
 Shows an alert banner, systemd units and processes, feed freshness, TLS days
 left, disk, signing, public traffic from Aperture's access log (paid / free /
 quote / discovery / scanner noise, with a paywall funnel joined to LND
@@ -243,10 +248,6 @@ proposed prices in `derived.py ENDPOINTS`.
   9 self-paid sats: subtract them when counting real sales. LND's default pathfinding
   found no route (long route below its minimum success probability); `buildroute` +
   `sendtoroute` did.
-
-- **Pending (owner, after the build is finished): dashboard access without the
-  SSH tunnel**, e.g. from a phone. Options discussed 2026-11-21: Tailscale (private,
-  free, recommended) or a public `/ops/` path behind the password with lockout.
 
 - Revenue: 0 settled L402 invoices as of 2026-11-11 (`RESEARCH.md` §1). In the
   7 days to 2026-11-11 the public traffic was ~3,900 scanner requests and 2
